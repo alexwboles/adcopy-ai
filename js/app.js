@@ -167,6 +167,7 @@ function generate(bumpSeed) {
   const f = generateFacebookAd(input, state.tone);
   renderAdFields(g, f);
   refreshChecklist();
+  syncChrome();
 }
 
 function refreshChecklist() {
@@ -177,8 +178,7 @@ function refreshChecklist() {
   ul.innerHTML = "";
   const known = new Set(items.map(i => i.id));
   CHECKLIST.forEach(def => { if (!known.has(def.id)) items.push({ id: def.id, label: def.label, pass: false, detail: "not evaluated" }); });
-  items.forEach(it => {
-    const li = document.createElement("li");
+  items.forEach(it => {    const li = document.createElement("li");
     li.className = it.pass ? "pass" : "";
     const mark = document.createElement("span");
     mark.className = "mark";
@@ -191,6 +191,29 @@ function refreshChecklist() {
     li.appendChild(mark); li.appendChild(label); li.appendChild(detail);
     ul.appendChild(li);
   });
+  const passed = items.filter(i => i.pass).length;
+  const qc = $("qa-count");
+  if (qc) qc.textContent = passed + " / " + items.length + " passing";
+}
+
+// ---------- mockup chrome: keep the fake platform UI in sync with the brief ----------
+
+function syncChrome() {
+  const business = $("business").value.trim();
+  const website = $("website").value.trim();
+  const host = (website.replace(/^https?:\/\//, "").split("/")[0] || "").toLowerCase();
+  const urlEl = $("g-url");
+  if (urlEl) urlEl.textContent = host || (business ? business.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".com" : "yourbusiness.com");
+  const pageEl = $("fb-page");
+  if (pageEl) pageEl.textContent = business || "Your business";
+  const avEl = $("fb-avatar");
+  if (avEl) avEl.textContent = (business || "B").trim().charAt(0).toUpperCase();
+  const domEl = $("fb-domain");
+  if (domEl) domEl.textContent = host || "yourbusiness.com";
+  const ctaBtn = $("fb-cta-btn");
+  if (ctaBtn) ctaBtn.textContent = state.cta || "Learn more";
+  const creative = $("fb-creative-line");
+  if (creative) creative.textContent = business ? ("Sponsored · " + business) : "Your creative goes here";
 }
 
 // ---------- clipboard ----------
@@ -392,6 +415,14 @@ function boot() {
   $("regenerate").addEventListener("click", () => generate(true));
   $("save-campaign").addEventListener("click", saveCampaign);
   $("polish").addEventListener("click", polishWithAI);
+
+  // Keep the mockup chrome (SERP breadcrumb, FB page card) in sync with the brief.
+  ["business", "website"].forEach(id => {
+    $(id).addEventListener("input", syncChrome);
+  });
+  const _renderCta = renderCtaPicker;
+  renderCtaPicker = function () { _renderCta(); syncChrome(); };
+  syncChrome();
 
   // Regenerate when the business inputs change after first generation? No —
   // keep it explicit so the checklist stays tied to visible copy.

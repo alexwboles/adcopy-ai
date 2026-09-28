@@ -5,109 +5,126 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AdCopy AI — Ready-to-run ads in seconds</title>
 <meta name="description" content="Describe your business. Get ready-to-run Google and Facebook ads in seconds. Free, no sign-up, works offline.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<header class="hero">
-  <h1>AdCopy <span class="spark">AI</span></h1>
-  <p>Describe your business. Get ready-to-run ads in seconds.</p>
+<header class="studio-top">
+  <div class="brand"><span class="brand-mark">A</span><span class="brand-name">AdCopy <em>AI</em></span></div>
+  <p class="studio-tag">The copy desk for small-business ads — brief it, preview it, ship it.</p>
+  <span class="live-pill"><span class="pulse"></span>Local engine · works offline</span>
 </header>
 
-<main class="wrap">
+<main class="studio">
 
-  <!-- 1. Business input -->
-  <section class="card" id="input-card">
-    <h2>1 · Your business</h2>
-    <p class="sub">Plain English is fine — the generator pulls keywords straight from your description.</p>
+  <!-- ============ THE BRIEF ============ -->
+  <aside class="brief">
+    <section class="brief-card">
+      <h2>The brief</h2>
+      <p class="sub">Plain English is fine — the generator pulls keywords straight from your description.</p>
 
-    <label class="field" for="business">Business name</label>
-    <input type="text" id="business" placeholder="e.g. Bright Smile Dental" autocomplete="off">
+      <label class="field" for="business">Business name</label>
+      <input type="text" id="business" placeholder="e.g. Bright Smile Dental" autocomplete="off">
 
-    <label class="field" for="description">What do you do? <span class="limit-hint">(describe it in your own words)</span></label>
-    <textarea id="description" placeholder="e.g. We are a family dental clinic offering gentle cleanings, whitening and same-day crowns. New patients get a free consultation."></textarea>
+      <label class="field" for="description">What do you do? <span class="limit-hint">describe it in your own words</span></label>
+      <textarea id="description" rows="4" placeholder="e.g. We are a family dental clinic offering gentle cleanings, whitening and same-day crowns. New patients get a free consultation."></textarea>
 
-    <div class="row">
-      <div>
-        <label class="field" for="website">Website <span class="limit-hint">(optional)</span></label>
-        <input type="text" id="website" placeholder="https://example.com" autocomplete="off">
+      <div class="row2">
+        <div>
+          <label class="field" for="website">Website <span class="limit-hint">optional</span></label>
+          <input type="text" id="website" placeholder="https://example.com" autocomplete="off">
+        </div>
+        <div>
+          <label class="field" for="keywords">Extra keywords <span class="limit-hint">optional, comma separated</span></label>
+          <input type="text" id="keywords" placeholder="e.g. teeth whitening, braces" autocomplete="off">
+        </div>
       </div>
+
+      <label class="field">Call to action</label>
+      <div class="ctagrid" id="cta-picker" role="radiogroup" aria-label="Call to action"></div>
+
+      <label class="field">Tone of voice</label>
+      <div class="tonebar" id="tone-bar" role="radiogroup" aria-label="Tone"></div>
+
+      <div class="brief-actions">
+        <button class="btn" id="generate">Generate ads</button>
+        <button class="btn ghost" id="regenerate" disabled>Regenerate</button>
+      </div>
+      <p class="microcopy">Regenerate spins fresh variants from the same brief — nothing you typed is lost.</p>
+    </section>
+
+    <section class="brief-card dim">
+      <h2>AI polish <span class="limit-hint">optional</span></h2>
+      <p class="sub">The built-in engine needs no key. Add one and the polish button tries a single AI pass — on <em>any</em> failure it falls back to local copy and says so.</p>
+      <label class="field" for="openai-key">OpenAI API key</label>
+      <input type="text" id="openai-key" placeholder="sk-… (stored only in this browser)" autocomplete="off">
+      <div class="brief-actions">
+        <button class="btn ghost" id="polish" disabled>Polish with AI</button>
+      </div>
+      <div class="notice" id="ai-notice"></div>
+    </section>
+  </aside>
+
+  <!-- ============ LIVE PREVIEWS ============ -->
+  <section class="outputs">
+    <div class="out-head">
       <div>
-        <label class="field" for="keywords">Extra keywords <span class="limit-hint">(optional, comma separated)</span></label>
-        <input type="text" id="keywords" placeholder="e.g. teeth whitening, braces" autocomplete="off">
+        <h2>Live previews</h2>
+        <p class="sub">Exactly how the copy reads in the wild. Every line stays editable — counters turn red over the limit.</p>
       </div>
     </div>
 
-    <label class="field">Call to action</label>
-    <div class="ctagrid" id="cta-picker" role="radiogroup" aria-label="Call to action"></div>
+    <section class="mock" id="google-card" hidden>
+      <div class="mock-bar"><span class="mock-name"><span class="g-dot"></span>Google Search</span><button class="btn ghost small" data-copy="google">Copy all</button></div>
+      <div class="serp">
+        <div class="serp-top"><span class="ad-badge">Ad</span><span class="serp-url" id="g-url">yourbusiness.com</span></div>
+        <div id="g-headlines" class="serp-heads"></div>
+        <div id="g-descriptions" class="serp-descs"></div>
+      </div>
+      <p class="mock-note">Responsive search ad · 3 headlines ≤ 30 chars · 2 descriptions ≤ 90 chars</p>
+    </section>
 
-    <label class="field">Tone</label>
-    <div class="tonebar" id="tone-bar" role="radiogroup" aria-label="Tone"></div>
+    <section class="mock" id="fb-card" hidden>
+      <div class="mock-bar"><span class="mock-name"><span class="fb-dot"></span>Facebook feed</span><button class="btn ghost small" data-copy="fb">Copy all</button></div>
+      <div class="fbcard">
+        <div class="fb-head">
+          <span class="fb-avatar" id="fb-avatar">B</span>
+          <div class="fb-who"><div class="fb-page" id="fb-page">Your business</div><div class="fb-sub">Sponsored · <span id="fb-domain">yourbusiness.com</span></div></div>
+        </div>
+        <div id="f-primary" class="fb-primary"></div>
+        <div class="fb-creative"><span id="fb-creative-line">Your creative goes here</span></div>
+        <div class="fb-foot">
+          <div class="fb-linkwrap"><div id="f-rest" class="fb-link"></div></div>
+          <button class="fb-cta" id="fb-cta-btn" type="button" tabindex="-1">Learn more</button>
+        </div>
+      </div>
+      <p class="mock-note">Feed placement · primary text ≤ 125 chars ideal · headline ≤ 40 · link description ≤ 30</p>
+    </section>
 
-    <div class="toolbar">
-      <button class="btn" id="generate">Generate ads</button>
-      <button class="btn ghost" id="regenerate" disabled>Regenerate (new variants)</button>
-    </div>
+    <section class="panel" id="check-card" hidden>
+      <div class="panel-head"><h2>Pre-flight check</h2><span class="qa-count" id="qa-count"></span></div>
+      <p class="sub">Re-validated on every keystroke against live copy.</p>
+      <ul class="checklist" id="checklist"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Saved campaigns</h2></div>
+      <p class="sub">Stored only in this browser (<span class="kbd-note">localStorage · <code>adcopy.v1</code></span>). Nothing leaves your device.</p>
+      <div class="savebar">
+        <input type="text" id="campaign-name" placeholder="Campaign name…" autocomplete="off">
+        <button class="btn ghost" id="save-campaign" disabled>Save current ads</button>
+      </div>
+      <div id="saved-list" class="saved-list"></div>
+    </section>
   </section>
-
-  <!-- 2. Google ad -->
-  <section class="card" id="google-card" hidden>
-    <h2>2 · Google Search ad</h2>
-    <p class="sub">3 headlines (≤ 30 chars) + 2 descriptions (≤ 90 chars). Counters turn red over the limit. Everything is editable.</p>
-    <div class="adblock">
-      <div class="adhead"><strong>Headlines</strong><button class="btn ghost small" data-copy="google">Copy all</button></div>
-      <div id="g-headlines"></div>
-      <div class="adhead" style="margin-top:14px"><strong>Descriptions</strong></div>
-      <div id="g-descriptions"></div>
-    </div>
-  </section>
-
-  <!-- 3. Facebook ad -->
-  <section class="card" id="fb-card" hidden>
-    <h2>3 · Facebook ad</h2>
-    <p class="sub">Primary text (aim ≤ 125 chars), headline and link description.</p>
-    <div class="adblock">
-      <div class="adhead"><strong>Primary text</strong><button class="btn ghost small" data-copy="fb">Copy all</button></div>
-      <div id="f-primary"></div>
-      <div class="adhead" style="margin-top:14px"><strong>Headline &amp; link description</strong></div>
-      <div id="f-rest"></div>
-    </div>
-  </section>
-
-  <!-- 4. Checklist -->
-  <section class="card" id="check-card" hidden>
-    <h2>4 · Best-practice checklist</h2>
-    <p class="sub">Checked live against your current copy — edit any field above and watch this update.</p>
-    <ul class="checklist" id="checklist"></ul>
-  </section>
-
-  <!-- 5. Saved campaigns -->
-  <section class="card">
-    <h2>5 · Saved campaigns</h2>
-    <p class="sub">Stored only in this browser (<span class="kbd-note">localStorage · key <code>adcopy.v1</code></span>). Nothing leaves your device.</p>
-    <div class="toolbar">
-      <input type="text" id="campaign-name" placeholder="Campaign name…" style="max-width:260px" autocomplete="off">
-      <button class="btn ghost" id="save-campaign" disabled>Save current ads</button>
-    </div>
-    <div id="saved-list" style="margin-top:10px"></div>
-  </section>
-
-  <!-- 6. Settings -->
-  <section class="card">
-    <h2>6 · Settings <span class="limit-hint">(optional)</span></h2>
-    <p class="sub">AdCopy AI works fully offline with its built-in template engine — no key needed. If you add an OpenAI API key, the “Polish with AI” button will try one AI pass over your copy; on <em>any</em> failure it silently falls back to the local templates and tells you so.</p>
-    <label class="field" for="openai-key">OpenAI API key</label>
-    <input type="text" id="openai-key" placeholder="sk-… (stored only in this browser)" autocomplete="off">
-    <div class="toolbar">
-      <button class="btn ghost" id="polish" disabled>Polish with AI</button>
-    </div>
-    <div class="notice" id="ai-notice"></div>
-  </section>
-
-  <footer>
-    AdCopy AI · free forever · your data never leaves this browser · <span id="foot-year"></span>
-  </footer>
 </main>
+
+<footer class="studio-foot">
+  <span>AdCopy AI · free forever · your data never leaves this browser</span><span id="foot-year"></span>
+</footer>
 
 <script src="js/copybank.js"></script>
 <script src="js/logic.js"></script>
