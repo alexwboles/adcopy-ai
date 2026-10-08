@@ -18,6 +18,11 @@ Type a plain-English description of your business, pick a tone and a call-to-act
 - **CTA picker** — Shop Now, Call Today, Book Online, Get a Free Quote, Learn More, Visit Us
 - **Live best-practice checklist** — 8 checks (length limits, keyword use, CTA presence, benefit/number mention, no ALL-CAPS, no unproven superlatives, FB length ideal) re-validated as you type
 - **Copy-to-clipboard** per ad block, and **saved campaigns** in `localStorage`
+- **CSV export** — download the current ads as a CSV for bulk import workflows.
+- **Ad quality score** — 0–100 score next to the pre-flight checklist, computed from its pass rate.
+- **Pinnable keywords** — detected keywords appear as chips under the brief; tap one to force it as the headline keyword.
+- **Regeneration history** — flip back through your last 8 variants with Prev/Next.
+- **Saved-campaign search + duplicate** — filter saved campaigns by name/business and clone any of them.
 - **Optional AI polish** — paste an OpenAI API key in Settings and the app will try one AI pass; on *any* failure it falls back to the local engine and says so honestly. The key is never required.
 
 ## How to run
