@@ -17,7 +17,11 @@ const state = {
   seed: 0,
   generated: false,
   saved: [],
-  openaiKey: ""
+  openaiKey: "",
+  pinnedKeyword: "",
+  history: [],
+  histIdx: -1,
+  savedQuery: ""
 };
 
 function $(id) { return document.getElementById(id); }
@@ -48,6 +52,7 @@ function readInput() {
     website: $("website").value.trim(),
     keywords: $("keywords").value.trim(),
     cta: state.cta,
+    pinnedKeyword: state.pinnedKeyword,
     _seed: state.seed
   };
 }
@@ -157,6 +162,7 @@ function renderAdFields(g, f) {
   $("regenerate").disabled = false;
   $("save-campaign").disabled = false;
   $("polish").disabled = false;
+  $("export-csv").disabled = false;
   state.generated = true;
 }
 
@@ -168,6 +174,107 @@ function generate(bumpSeed) {
   renderAdFields(g, f);
   refreshChecklist();
   syncChrome();
+  pushHistory();
+}
+
+// ---------- regeneration history: keep the last 8 variants ----------
+
+function pushHistory() {
+  if (!state.generated) return;
+  state.history.push({
+    google: currentGoogleAd(),
+    fb: currentFbAd(),
+    tone: state.tone,
+    cta: state.cta,
+    label: "Variant " + (state.seed + 1) + " · " + state.tone
+  });
+  if (state.history.length > 8) state.history.shift();
+  state.histIdx = state.history.length - 1;
+  syncHistNav();
+}
+
+function showHistory(idx) {
+  const h = state.history[idx];
+  if (!h) return;
+  state.histIdx = idx;
+  state.tone = h.tone;
+  state.cta = h.cta;
+  renderToneBar(); renderCtaPicker();
+  renderAdFields(h.google, h.fb);
+  refreshChecklist();
+  syncChrome();
+  syncHistNav();
+}
+
+function syncHistNav() {
+  const p = $("hist-prev"), n = $("hist-next");
+  if (!p || !n) return;
+  const has = state.history.length > 1;
+  p.disabled = !has || state.histIdx <= 0;
+  n.disabled = !has || state.histIdx >= state.history.length - 1;
+  const lbl = $("hist-label");
+  if (lbl) lbl.textContent = state.history.length
+    ? ("variant " + (state.histIdx + 1) + " of " + state.history.length)
+    : "";
+}
+
+// ---------- detected keyword chips: pin the primary keyword ----------
+
+function renderKeywordChips() {
+  const box = $("kw-chips");
+  if (!box) return;
+  box.innerHTML = "";
+  const text = [$("description").value, $("keywords").value].filter(Boolean).join(" ");
+  const kws = (typeof extractKeywords === "function" ? extractKeywords(text) : []).slice(0, 6);
+  if (!kws.length) {
+    const p = document.createElement("p");
+    p.className = "empty mini";
+    p.textContent = "Type a description and keywords will appear here — tap one to force it as the headline keyword.";
+    box.appendChild(p);
+    return;
+  }
+  const head = document.createElement("p");
+  head.className = "microcopy";
+  head.textContent = "Detected keywords — tap to pin one as the headline keyword:";
+  box.appendChild(head);
+  kws.forEach(k => {
+    const b = document.createElement("button");
+    b.type = "button";
+    const pinned = state.pinnedKeyword === k;
+    b.className = "chipbtn" + (pinned ? " active" : "");
+    b.textContent = (pinned ? "● " : "") + k;
+    b.title = pinned ? "Pinned — click to unpin" : "Pin as the headline keyword";
+    b.addEventListener("click", () => {
+      state.pinnedKeyword = pinned ? "" : k;
+      renderKeywordChips();
+      if (state.generated) generate(false);
+    });
+    box.appendChild(b);
+  });
+}
+
+// ---------- CSV export ----------
+
+function downloadFile(name, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function exportCSV() {
+  const csv = adsToCSV(currentGoogleAd(), currentFbAd(), $("business").value.trim());
+  downloadFile("adcopy-ads.csv", csv, "text/csv;charset=utf-8");
+  const btn = $("export-csv");
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = "Exported ✓";
+    setTimeout(() => { btn.textContent = orig; }, 1400);
+  }
 }
 
 function refreshChecklist() {
@@ -194,6 +301,13 @@ function refreshChecklist() {
   const passed = items.filter(i => i.pass).length;
   const qc = $("qa-count");
   if (qc) qc.textContent = passed + " / " + items.length + " passing";
+  const qs = $("qa-score");
+  if (qs) {
+    const score = qualityScore(items);
+    qs.textContent = "Quality " + score + "%";
+    qs.classList.remove("good", "warn", "bad");
+    qs.classList.add(score >= 80 ? "good" : score >= 50 ? "warn" : "bad");
+  }
 }
 
 // ---------- mockup chrome: keep the fake platform UI in sync with the brief ----------
@@ -259,6 +373,11 @@ function wireCopyButtons() {
 function renderSaved() {
   const list = $("saved-list");
   list.innerHTML = "";
+  const q = (state.savedQuery || "").toLowerCase().trim();
+  const visible = state.saved.filter(c =>
+    !q || (c.name || "").toLowerCase().includes(q) ||
+    (c.input.business || "").toLowerCase().includes(q)
+  );
   if (!state.saved.length) {
     const p = document.createElement("p");
     p.className = "empty";
@@ -266,7 +385,14 @@ function renderSaved() {
     list.appendChild(p);
     return;
   }
-  state.saved.forEach(c => {
+  if (!visible.length) {
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No campaigns match your search.";
+    list.appendChild(p);
+    return;
+  }
+  visible.forEach(c => {
     const row = document.createElement("div");
     row.className = "saved-item";
     const meta = document.createElement("div");
@@ -284,6 +410,19 @@ function renderSaved() {
     load.textContent = "Load";
     load.addEventListener("click", () => loadCampaign(c));
 
+    const dup = document.createElement("button");
+    dup.className = "btn ghost small";
+    dup.textContent = "Duplicate";
+    dup.title = "Copy this campaign";
+    dup.addEventListener("click", () => {
+      state.saved.unshift(Object.assign({}, c, {
+        id: "c" + Date.now().toString(36),
+        name: (c.name || "Campaign") + " (copy)",
+        date: new Date().toISOString()
+      }));
+      persist(); renderSaved();
+    });
+
     const del = document.createElement("button");
     del.className = "btn ghost small";
     del.textContent = "Delete";
@@ -292,7 +431,7 @@ function renderSaved() {
       persist(); renderSaved();
     });
 
-    row.appendChild(meta); row.appendChild(load); row.appendChild(del);
+    row.appendChild(meta); row.appendChild(load); row.appendChild(dup); row.appendChild(del);
     list.appendChild(row);
   });
 }
@@ -319,7 +458,8 @@ function loadCampaign(c) {
   $("keywords").value = c.input.keywords || "";
   state.tone = c.tone || "friendly";
   state.cta = c.input.cta || CTAS[0];
-  renderToneBar(); renderCtaPicker();
+  state.pinnedKeyword = c.input.pinnedKeyword || "";
+  renderToneBar(); renderCtaPicker(); renderKeywordChips();
   renderAdFields(c.google, c.fb);
   refreshChecklist();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -415,11 +555,26 @@ function boot() {
   $("regenerate").addEventListener("click", () => generate(true));
   $("save-campaign").addEventListener("click", saveCampaign);
   $("polish").addEventListener("click", polishWithAI);
+  const csvBtn = $("export-csv");
+  if (csvBtn) csvBtn.addEventListener("click", exportCSV);
+  const hp = $("hist-prev"), hn = $("hist-next");
+  if (hp) hp.addEventListener("click", () => showHistory(state.histIdx - 1));
+  if (hn) hn.addEventListener("click", () => showHistory(state.histIdx + 1));
+  const sq = $("saved-search");
+  if (sq) sq.addEventListener("input", () => {
+    state.savedQuery = sq.value;
+    renderSaved();
+  });
 
   // Keep the mockup chrome (SERP breadcrumb, FB page card) in sync with the brief.
   ["business", "website"].forEach(id => {
     $(id).addEventListener("input", syncChrome);
   });
+  // Live keyword chips as the brief changes.
+  ["description", "keywords"].forEach(id => {
+    $(id).addEventListener("input", renderKeywordChips);
+  });
+  renderKeywordChips();
   const _renderCta = renderCtaPicker;
   renderCtaPicker = function () { _renderCta(); syncChrome(); };
   syncChrome();

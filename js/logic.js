@@ -74,6 +74,36 @@ function fillTemplate(tpl, slots) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => (slots[k] == null ? "" : String(slots[k])));
 }
 
+function escapeCsvCell(v) {
+  const s = String(v == null ? "" : v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+// Export the current ads as a CSV (Google Ads Editor-friendly columns plus the
+// Facebook block). Pure function — the caller handles the download.
+function adsToCSV(googleAd, fbAd, business) {
+  const g = googleAd || { headlines: [], descriptions: [] };
+  const f = fbAd || { primary: "", headline: "", linkDesc: "" };
+  const rows = [
+    ["business", "tone", "field", "text", "chars", "limit"]
+  ];
+  const biz = business || "";
+  const push = (field, text, limit) => rows.push([biz, g.tone || "", field, text || "", String((text || "").length), String(limit || "")]);
+  (g.headlines || []).forEach((h, i) => push("headline_" + (i + 1), h, 30));
+  (g.descriptions || []).forEach((d, i) => push("description_" + (i + 1), d, 90));
+  push("fb_primary", f.primary, 125);
+  push("fb_headline", f.headline, 40);
+  push("fb_link_desc", f.linkDesc, 30);
+  return rows.map(r => r.map(escapeCsvCell).join(",")).join("\n");
+}
+
+// Quality score 0–100 from the checklist pass rate. Pure.
+function qualityScore(items) {
+  const list = items || [];
+  if (!list.length) return 0;
+  return Math.round((list.filter(i => i.pass).length / list.length) * 100);
+}
+
 function slotsAvailable(tpl, slots) {
   const needed = tpl.match(/\{(\w+)\}/g) || [];
   return needed.every(s => {
@@ -129,7 +159,8 @@ function buildSlots(input, toneKey, number) {
   const bank = __AD.BANK[toneKey] || __AD.BANK.friendly;
   const text = [input.description, input.keywords].filter(Boolean).join(" ");
   const kws = extractKeywords(text);
-  const keyword = kws.length ? titleCase(kws[0]) : "Services";
+  const pinned = (input.pinnedKeyword || "").trim();
+  const keyword = pinned || (kws.length ? titleCase(kws[0]) : "Services");
   return {
     keywords: kws,
     keyword,
@@ -248,5 +279,5 @@ function validateCopy(googleAd, fbAd, input) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { extractKeywords, generateGoogleAd, generateFacebookAd, validateCopy };
+  module.exports = { extractKeywords, generateGoogleAd, generateFacebookAd, validateCopy, adsToCSV, qualityScore };
 }

@@ -43,6 +43,8 @@
         </div>
       </div>
 
+      <div class="kwchips" id="kw-chips" aria-label="Detected keywords"></div>
+
       <label class="field">Call to action</label>
       <div class="ctagrid" id="cta-picker" role="radiogroup" aria-label="Call to action"></div>
 
@@ -75,6 +77,14 @@
         <h2>Live previews</h2>
         <p class="sub">Exactly how the copy reads in the wild. Every line stays editable — counters turn red over the limit.</p>
       </div>
+      <div class="out-actions">
+        <button class="btn ghost" id="export-csv" disabled>Export CSV</button>
+        <div class="histnav" aria-label="Variant history">
+          <button class="btn ghost small" id="hist-prev" disabled>‹ Prev</button>
+          <span class="hist-label" id="hist-label"></span>
+          <button class="btn ghost small" id="hist-next" disabled>Next ›</button>
+        </div>
+      </div>
     </div>
 
     <section class="mock" id="google-card" hidden>
@@ -105,7 +115,7 @@
     </section>
 
     <section class="panel" id="check-card" hidden>
-      <div class="panel-head"><h2>Pre-flight check</h2><span class="qa-count" id="qa-count"></span></div>
+      <div class="panel-head"><h2>Pre-flight check</h2><span class="qa-score" id="qa-score"></span><span class="qa-count" id="qa-count"></span></div>
       <p class="sub">Re-validated on every keystroke against live copy.</p>
       <ul class="checklist" id="checklist"></ul>
     </section>
@@ -116,6 +126,9 @@
       <div class="savebar">
         <input type="text" id="campaign-name" placeholder="Campaign name…" autocomplete="off">
         <button class="btn ghost" id="save-campaign" disabled>Save current ads</button>
+      </div>
+      <div class="savebar">
+        <input type="text" id="saved-search" placeholder="Search saved campaigns…" autocomplete="off" aria-label="Search saved campaigns">
       </div>
       <div id="saved-list" class="saved-list"></div>
     </section>

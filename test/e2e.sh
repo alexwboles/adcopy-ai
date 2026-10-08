@@ -68,5 +68,40 @@ const b=L.generateGoogleAd(Object.assign({_seed:7},S),"bold");
 if(a.headlines.join("|")===b.headlines.join("|")) throw new Error("no variation");
 '
 
+check "8: CSV export round-trips all generated fields with correct limits" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE);
+const g=L.generateGoogleAd(S,"friendly"), f=L.generateFacebookAd(S,"friendly");
+const lines=L.adsToCSV(g,f,S.business).split("\n");
+if(lines[0]!=="business,tone,field,text,chars,limit") throw new Error("bad header");
+const hl=lines.filter(l=>l.includes("headline_"));
+const ds=lines.filter(l=>l.includes("description_"));
+if(hl.length!==3||ds.length!==2) throw new Error("google rows: "+hl.length+"/"+ds.length);
+// chars column must match the actual text length (accounting for CSV quoting)
+hl.forEach(l=>{
+  const cols=l.match(/(".*?"|[^,]*),/g).map(c=>c.replace(/,$/,""));
+  const text=cols[3].replace(/^"|"$/g,"").replace(/""/g,"\"");
+  if(String(text.length)!==cols[4]) throw new Error("char count mismatch in "+l);
+});
+'
+
+check "9: qualityScore honors the checklist items exactly" node -e '
+const L=require("./js/logic.js"), B=require("./js/copybank.js");
+const S=JSON.parse(process.env.SAMPLE);
+const g=L.generateGoogleAd(S,"friendly"), f=L.generateFacebookAd(S,"friendly");
+const items=L.validateCopy(g,f,S);
+const q=L.qualityScore(items);
+const expect=Math.round(items.filter(i=>i.pass).length/items.length*100);
+if(q!==expect) throw new Error("score "+q+" != expected "+expect);
+if(items.length!==B.CHECKLIST.length) throw new Error("checklist drift");
+'
+
+check "10: pinned keyword flows through to the Facebook ad as well" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE); S.pinnedKeyword="whitening";
+const f=L.generateFacebookAd(S,"bold");
+if(f.keyword!=="Whitening"&&!f.primary.toLowerCase().includes("whitening")) throw new Error("pinned keyword missing from FB ad: "+f.primary);
+'
+
 echo "--- e2e: $pass passed, $fail failed ---"
 exit $((fail>0))

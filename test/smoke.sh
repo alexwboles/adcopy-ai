@@ -42,9 +42,40 @@ if(items.length!==B.CHECKLIST.length) throw new Error('count '+items.length);
 if(!items.every(i=>typeof i.pass==='boolean' && i.id && i.label)) throw new Error('shape bad');
 "
 
+check "adsToCSV produces header + 8 data rows with CSV escaping" node -e "
+const L=require('./js/logic.js');
+const input={business:'Bright Smile Dental',description:'Family dental clinic offering gentle cleanings.',cta:'Book Online'};
+const g=L.generateGoogleAd(input,'friendly'), f=L.generateFacebookAd(input,'friendly');
+const csv=L.adsToCSV(g,f,input.business);
+const lines=csv.split('\n');
+if(lines[0]!=='business,tone,field,text,chars,limit') throw new Error('header: '+lines[0]);
+if(lines.length!==9) throw new Error('rows: '+lines.length);
+if(!lines.some(l=>l.includes('headline_1'))) throw new Error('no headline rows');
+if(!lines.some(l=>l.includes('fb_primary'))) throw new Error('no fb rows');
+// cell with a comma must be quoted
+const q=L.adsToCSV({headlines:['A, B'],descriptions:[],tone:'friendly'},{primary:'',headline:'',linkDesc:''},'Biz');
+if(!q.split('\n')[1].includes('\"A, B\"')) throw new Error('no CSV quoting');
+"
+
+check "qualityScore maps pass-rate to 0-100" node -e "
+const L=require('./js/logic.js');
+if(L.qualityScore([])!==0) throw new Error('empty not 0');
+const all=[{pass:true},{pass:true},{pass:true},{pass:true}];
+if(L.qualityScore(all)!==100) throw new Error('all-pass not 100');
+if(L.qualityScore([{pass:true},{pass:false}])!==50) throw new Error('half not 50');
+"
+
 check "index.html references all three js files" node -e "
 const fs=require('fs'), h=fs.readFileSync('index.html','utf8');
 for(const f of ['js/copybank.js','js/logic.js','js/app.js']) if(!h.includes(f)) throw new Error('missing '+f);
+"
+
+check "pinnedKeyword overrides the extracted headline keyword" node -e "
+const L=require('./js/logic.js');
+const S={business:'Bright Smile Dental',description:'Family dental clinic offering gentle cleanings, whitening and same-day crowns.',cta:'Book Online',pinnedKeyword:'whitening'};
+const g=L.generateGoogleAd(Object.assign({_seed:0},S),'friendly');
+const joined=g.headlines.join(' ').toLowerCase();
+if(!joined.includes('whitening')) throw new Error('pinned keyword absent: '+g.headlines.join(' | '));
 "
 
 echo "--- smoke: $pass passed, $fail failed ---"

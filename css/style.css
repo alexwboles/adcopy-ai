@@ -112,8 +112,28 @@ textarea { resize: vertical; }
 
 /* ---------- outputs ---------- */
 .outputs { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.out-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .out-head h2 { font-size: 26px; }
 .out-head .sub { margin-bottom: 0; }
+.out-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.histnav { display: flex; align-items: center; gap: 8px; }
+.hist-label { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 92px; text-align: center; }
+.qa-score { font-family: var(--mono); font-size: 12.5px; font-weight: 700; padding: 2px 10px; border: 1px solid var(--line); }
+.qa-score.good { color: var(--green); border-color: #bfe3cc; background: var(--green-soft); }
+.qa-score.warn { color: #7c4a12; border-color: #f0d9ae; background: #fdf3e3; }
+.qa-score.bad { color: var(--red); border-color: #f2c4c4; background: var(--red-soft); }
+
+/* ---------- keyword chips ---------- */
+.kwchips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.kwchips .microcopy { width: 100%; margin: 0; }
+.kwchips .empty.mini { padding: 2px 0; font-size: 12.5px; }
+.chipbtn {
+  border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
+  font-size: 13px; padding: 6px 12px; border-radius: 0; cursor: pointer;
+  font-family: var(--sans);
+}
+.chipbtn:hover { border-color: var(--emerald); color: var(--emerald-ink); }
+.chipbtn.active { background: var(--emerald-ink); border-color: var(--emerald-ink); color: #fff; font-weight: 600; }
 
 .mock, .panel {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
