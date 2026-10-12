@@ -284,3 +284,18 @@ li.pass .mark { background: var(--green-soft); color: var(--green); }
   .serp-heads input { font-size: 17px; }
   .studio-foot { flex-direction: column; gap: 4px; padding: 18px; }
 }
+
+/* ---------- display paths (Google SERP /path1/path2) ---------- */
+.serp-paths { display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; }
+.serp-paths .copyline { display: inline-flex; align-items: center; }
+.serp-paths .copyline input { width: 110px; font-size: 12px; padding: 3px 6px; }
+.serp-paths .counter { font-size: 11px; }
+.path-slash { color: #9aa1a9; font-size: 13px; }
+
+/* ---------- full RSA asset set ---------- */
+.rsa-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.rsa-h { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin: 4px 0 8px; }
+.rsa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rsa-list li { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border: 1px solid var(--line); padding: 7px 10px; background: #fff; }
+.rsa-text { font-size: 13px; }
+@media (max-width: 640px) { .rsa-cols { grid-template-columns: 1fr; } }

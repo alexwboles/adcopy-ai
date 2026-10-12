@@ -79,6 +79,7 @@
       </div>
       <div class="out-actions">
         <button class="btn ghost" id="export-csv" disabled>Export CSV</button>
+        <button class="btn ghost" id="export-ab" disabled>Export A/B CSV (3 tones)</button>
         <div class="histnav" aria-label="Variant history">
           <button class="btn ghost small" id="hist-prev" disabled>‹ Prev</button>
           <span class="hist-label" id="hist-label"></span>
@@ -91,10 +92,11 @@
       <div class="mock-bar"><span class="mock-name"><span class="g-dot"></span>Google Search</span><button class="btn ghost small" data-copy="google">Copy all</button></div>
       <div class="serp">
         <div class="serp-top"><span class="ad-badge">Ad</span><span class="serp-url" id="g-url">yourbusiness.com</span></div>
+        <div class="serp-paths" id="g-paths" aria-label="Display paths (optional, 15 chars each)"></div>
         <div id="g-headlines" class="serp-heads"></div>
         <div id="g-descriptions" class="serp-descs"></div>
       </div>
-      <p class="mock-note">Responsive search ad · 3 headlines ≤ 30 chars · 2 descriptions ≤ 90 chars</p>
+      <p class="mock-note">Responsive search ad · 3 headlines ≤ 30 chars · 2 descriptions ≤ 90 chars · optional display paths ≤ 15 chars</p>
     </section>
 
     <section class="mock" id="fb-card" hidden>
@@ -118,6 +120,24 @@
       <div class="panel-head"><h2>Pre-flight check</h2><span class="qa-score" id="qa-score"></span><span class="qa-count" id="qa-count"></span></div>
       <p class="sub">Re-validated on every keystroke against live copy.</p>
       <ul class="checklist" id="checklist"></ul>
+    </section>
+
+    <section class="panel" id="rsa-card" hidden>
+      <div class="panel-head"><h2>Full RSA asset set</h2><span class="qa-count" id="rsa-count"></span></div>
+      <p class="sub">Google mixes and matches up to 15 headlines and 4 descriptions per responsive search ad. This is the full pool — the 3 headlines + 2 descriptions above stay your pinned core.</p>
+      <div class="rsa-cols">
+        <div>
+          <h3 class="rsa-h">Headlines</h3>
+          <ul class="rsa-list" id="rsa-headlines"></ul>
+        </div>
+        <div>
+          <h3 class="rsa-h">Descriptions</h3>
+          <ul class="rsa-list" id="rsa-descs"></ul>
+        </div>
+      </div>
+      <div class="brief-actions">
+        <button class="btn ghost" id="copy-rsa">Copy RSA assets</button>
+      </div>
     </section>
 
     <section class="panel">

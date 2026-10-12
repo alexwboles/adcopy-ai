@@ -23,6 +23,9 @@ Type a plain-English description of your business, pick a tone and a call-to-act
 - **Pinnable keywords** — detected keywords appear as chips under the brief; tap one to force it as the headline keyword.
 - **Regeneration history** — flip back through your last 8 variants with Prev/Next.
 - **Saved-campaign search + duplicate** — filter saved campaigns by name/business and clone any of them.
+- **Full RSA asset set** — a bonus pool of up to 15 headlines + 4 descriptions per tone (Google mixes and matches them); one-click copy of the whole set.
+- **Display paths** — editable /path1/path2 (≤ 15 chars each) under the SERP URL, live-synced, validated by the checklist, and included in CSV exports.
+- **A/B test CSV export** — regenerate the same brief in all 3 tones and export one CSV with a tone column for side-by-side bulk upload.
 - **Optional AI polish** — paste an OpenAI API key in Settings and the app will try one AI pass; on *any* failure it falls back to the local engine and says so honestly. The key is never required.
 
 ## How to run

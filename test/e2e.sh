@@ -103,5 +103,43 @@ const f=L.generateFacebookAd(S,"bold");
 if(f.keyword!=="Whitening"&&!f.primary.toLowerCase().includes("whitening")) throw new Error("pinned keyword missing from FB ad: "+f.primary);
 '
 
+check "11: RSA asset set rotates with the seed and differs from the pinned core set" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE);
+const r1=L.generateRSAAssets(Object.assign({_seed:0},S),"friendly");
+const r2=L.generateRSAAssets(Object.assign({_seed:5},S),"friendly");
+if(r1.headlines.join("|")===r2.headlines.join("|")) throw new Error("seed did not rotate RSA pool");
+const g=L.generateGoogleAd(Object.assign({_seed:0},S),"friendly");
+const core=new Set(g.headlines);
+const extra=r1.headlines.filter(h=>!core.has(h));
+if(!extra.length) throw new Error("RSA pool adds nothing beyond the core set");
+'
+
+check "12: paths-15 checklist item fails when a display path exceeds 15 chars" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE);
+const g=Object.assign(L.generateGoogleAd(S,"friendly"),{path1:"ok",path2:"this-path-is-way-too-long"});
+const f=L.generateFacebookAd(S,"friendly");
+const items=L.validateCopy(g,f,S);
+const p=items.find(i=>i.id==="paths-15");
+if(!p) throw new Error("paths-15 item missing");
+if(p.pass!==false) throw new Error("long path should fail");
+const ok=L.validateCopy(Object.assign({},g,{path2:"short"}),f,S).find(i=>i.id==="paths-15");
+if(ok.pass!==true) throw new Error("short paths should pass");
+'
+
+check "13: A/B CSV contains all three tones and matches the on-screen CSV shape" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE);
+const camps=["friendly","bold","professional"].map(t=>({tone:t,google:L.generateGoogleAd(Object.assign({_seed:1},S),t),fb:L.generateFacebookAd(Object.assign({_seed:1},S),t)}));
+const lines=L.adsToCSVAll(camps,S.business).split("\n");
+if(lines[0]!=="business,tone,field,text,chars,limit") throw new Error("header drift");
+for (const t of ["friendly","bold","professional"]) {
+  const rows=lines.filter(l=>l.split(",")[1]===t);
+  if(!rows.some(l=>l.includes("headline_1"))) throw new Error(t+" missing headline rows");
+  if(!rows.some(l=>l.includes("path_1"))) throw new Error(t+" missing path rows");
+}
+'
+
 echo "--- e2e: $pass passed, $fail failed ---"
 exit $((fail>0))

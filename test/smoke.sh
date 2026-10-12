@@ -42,19 +42,56 @@ if(items.length!==B.CHECKLIST.length) throw new Error('count '+items.length);
 if(!items.every(i=>typeof i.pass==='boolean' && i.id && i.label)) throw new Error('shape bad');
 "
 
-check "adsToCSV produces header + 8 data rows with CSV escaping" node -e "
+check "adsToCSV produces header + 10 data rows incl. display paths, with CSV escaping" node -e "
 const L=require('./js/logic.js');
 const input={business:'Bright Smile Dental',description:'Family dental clinic offering gentle cleanings.',cta:'Book Online'};
-const g=L.generateGoogleAd(input,'friendly'), f=L.generateFacebookAd(input,'friendly');
+const g=Object.assign(L.generateGoogleAd(input,'friendly'),{path1:'services',path2:'book'});
+const f=L.generateFacebookAd(input,'friendly');
 const csv=L.adsToCSV(g,f,input.business);
 const lines=csv.split('\n');
 if(lines[0]!=='business,tone,field,text,chars,limit') throw new Error('header: '+lines[0]);
-if(lines.length!==9) throw new Error('rows: '+lines.length);
+if(lines.length!==11) throw new Error('rows: '+lines.length);
 if(!lines.some(l=>l.includes('headline_1'))) throw new Error('no headline rows');
 if(!lines.some(l=>l.includes('fb_primary'))) throw new Error('no fb rows');
+if(!lines.some(l=>l.includes('path_1')&&l.includes('services'))) throw new Error('no path rows');
 // cell with a comma must be quoted
 const q=L.adsToCSV({headlines:['A, B'],descriptions:[],tone:'friendly'},{primary:'',headline:'',linkDesc:''},'Biz');
 if(!q.split('\n')[1].includes('\"A, B\"')) throw new Error('no CSV quoting');
+"
+
+check "generateRSAAssets returns up to 15 headlines + 4 descriptions, all within limits" node -e "
+const L=require('./js/logic.js');
+const input={business:'Bright Smile Dental',description:'Family dental clinic offering gentle cleanings.',cta:'Book Online',_seed:2};
+const r=L.generateRSAAssets(input,'bold');
+if(r.headlines.length>15||r.descriptions.length>4) throw new Error('too many: '+r.headlines.length+'/'+r.descriptions.length);
+if(r.headlines.length<10) throw new Error('asset pool too small: '+r.headlines.length);
+if(!r.headlines.every(h=>h.length<=30)) throw new Error('headline over 30');
+if(!r.descriptions.every(d=>d.length<=90)) throw new Error('desc over 90');
+if(new Set(r.headlines).size!==r.headlines.length) throw new Error('dup headlines');
+if(new Set(r.descriptions).size!==r.descriptions.length) throw new Error('dup descs');
+"
+
+check "fitPath trims display paths to 15 chars" node -e "
+const L=require('./js/logic.js');
+if(L.fitPath('  a very long path name here  ')!=='a very long pat') throw new Error('not trimmed');
+if(L.fitPath('short')!=='short') throw new Error('short changed');
+"
+
+check "adsToCSVAll exports one block per tone with tone column" node -e "
+const L=require('./js/logic.js');
+const input={business:'Biz',description:'We fix sinks fast.',cta:'Call Today',_seed:1};
+const camps=['friendly','bold','professional'].map(t=>({tone:t,google:L.generateGoogleAd(input,t),fb:L.generateFacebookAd(input,t)}));
+const csv=L.adsToCSVAll(camps,input.business);
+const lines=csv.split('\n');
+['friendly','bold','professional'].forEach(t=>{ if(!lines.some(l=>l.split(',')[1]===t)) throw new Error('missing tone '+t); });
+if(!lines.every(l=>l.split(',')[0]==='business'||l.split(',')[0]==='Biz')) throw new Error('business col drift');
+"
+
+check "index.html wires the RSA panel, paths, and A/B export" node -e "
+const fs=require('fs'), h=fs.readFileSync('index.html','utf8');
+for (const id of ['rsa-card','rsa-headlines','rsa-descs','g-paths','export-ab','copy-rsa']) if(!h.includes('id=\"'+id+'\"')) throw new Error('missing '+id);
+const a=fs.readFileSync('js/app.js','utf8');
+for (const fn of ['generateRSAAssets','adsToCSVAll','renderRsa','exportAB','copyRsa']) if(!a.includes(fn)) throw new Error('missing fn '+fn);
 "
 
 check "qualityScore maps pass-rate to 0-100" node -e "

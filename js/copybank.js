@@ -19,7 +19,8 @@ const CHECKLIST = [
   { id: "has-benefit-number",  label: "Mentions a specific benefit or number" },
   { id: "no-caps",             label: "No ALL-CAPS shouting" },
   { id: "no-clickbait",        label: "No clickbait superlatives without proof" },
-  { id: "fb-125",              label: "Facebook primary text ≤ 125 chars (ideal)" }
+  { id: "fb-125",              label: "Facebook primary text ≤ 125 chars (ideal)" },
+  { id: "paths-15",             label: "Display paths ≤ 15 chars each" }
 ];
 
 // Slot vocabulary: {keyword} {business} {benefit} {cta} {number}
@@ -34,14 +35,25 @@ const BANK = {
       "{business}: {keyword} Pros",
       "Hassle-Free {keyword}",
       "Get {keyword} Done Right",
-      "Smiling {keyword} Experts"
+      "Smiling {keyword} Experts",
+      "{keyword} With a Smile",
+      "We Love {keyword}",
+      "Easy {keyword} for You",
+      "Say Yes to {keyword}",
+      "Feel-Good {keyword}",
+      "{keyword}, Zero Stress",
+      "Happy {keyword} Starts Here",
+      "{business} Loves {keyword}"
     ],
     googleDescriptions: [
       "We make {keyword} simple and stress-free. {cta} today and see the difference.",
       "{business} delivers {keyword} {benefit}. Friendly service, honest pricing.",
       "Need {keyword}? Our happy team is ready to help. {cta}!",
       "{keyword} done {benefit} by people who care. {cta} to get started.",
-      "Join hundreds of happy customers enjoying better {keyword}. {cta} now."
+      "Join hundreds of happy customers enjoying better {keyword}. {cta} now.",
+      "Life's too short for {keyword} headaches. Our friendly crew handles it all. {cta} today!",
+      "{business} is the easy choice for {keyword}. Honest prices, happy customers. {cta} now.",
+      "Great {keyword} starts with great people. Meet ours — {cta} and feel the difference."
     ],
     fbPrimary: [
       "Looking for {keyword} you can actually feel good about? At {business}, we keep it simple, friendly, and honest. {cta} — we'd love to help!",
@@ -72,14 +84,25 @@ const BANK = {
       "No-Nonsense {keyword}",
       "{keyword}, Done Right",
       "{business} Means {keyword}",
-      "Upgrade Your {keyword} Now"
+      "Upgrade Your {keyword} Now",
+      "{keyword}. Period.",
+      "Own Your {keyword}",
+      "Fearless {keyword} Pros",
+      "We Win at {keyword}",
+      "Unstoppable {keyword}",
+      "Dominate With {keyword}",
+      "{keyword}, No Excuses",
+      "Real Talk: Great {keyword}"
     ],
     googleDescriptions: [
       "Tired of mediocre {keyword}? We do it better, faster, stronger. {cta} now.",
       "{keyword} with zero excuses and real results. {business} gets it done. {cta}.",
       "Don't gamble on {keyword}. Choose the team that delivers every time. {cta}.",
       "Big promises, bigger delivery. That's our {keyword}. {cta} today.",
-      "Your {keyword} problem ends here. Take action now — {cta}."
+      "Your {keyword} problem ends here. Take action now — {cta}.",
+      "Average {keyword} is everywhere. Exceptional {keyword} is here. {cta} and level up.",
+      "We don't do 'good enough' {keyword}. Expect more — {cta} now.",
+      "{business}: where {keyword} gets done and done well. {cta} today."
     ],
     fbPrimary: [
       "Enough with {keyword} that underdelivers. We show up, do the work, and stand behind it. {cta} — let's fix this today.",
@@ -110,14 +133,25 @@ const BANK = {
       "Experienced {keyword} Team",
       "Reliable {keyword} Solutions",
       "{keyword} Done Professionally",
-      "Your {keyword} Partner"
+      "Your {keyword} Partner",
+      "{keyword} You Can Trust",
+      "Certified {keyword} Pros",
+      "Precision {keyword} Work",
+      "{business} | {keyword}",
+      "Top-Rated {keyword}",
+      "Dependable {keyword} Team",
+      "{keyword}, Done to Standard",
+      "Leading {keyword} Firm"
     ],
     googleDescriptions: [
       "{business} provides dependable {keyword} backed by years of experience. {cta} for a consultation.",
       "Certified experts delivering {keyword} on time and on budget. {cta} today.",
       "For {keyword} you can rely on, choose the professionals. {cta} to discuss your needs.",
       "We combine expertise and care in every {keyword} project. {cta} for details.",
-      "Trusted by local businesses for {keyword} {benefit}. {cta} now."
+      "Trusted by local businesses for {keyword} {benefit}. {cta} now.",
+      "Our certified team delivers {keyword} with precision and care. {cta} for a quote.",
+      "{business} sets the standard for {keyword}. Professional service, every time. {cta}.",
+      "From quote to completion, our {keyword} process is seamless. {cta} today."
     ],
     fbPrimary: [
       "When {keyword} matters to your business, experience counts. {business} brings proven expertise to every project. {cta} to schedule a consultation.",

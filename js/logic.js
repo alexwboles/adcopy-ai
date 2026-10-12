@@ -79,6 +79,30 @@ function escapeCsvCell(v) {
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
+// A/B test export: one CSV whose rows cover several full campaigns
+// (e.g. one per tone), so variants can be bulk-uploaded side by side.
+// campaigns: [{ tone, google, fb }] — each google/fb shaped like the
+// single-campaign generators' output.
+function adsToCSVAll(campaigns, business) {
+  const biz = business || "";
+  const rows = [["business", "tone", "field", "text", "chars", "limit"]];
+  (campaigns || []).forEach(c => {
+    const g = (c && c.google) || { headlines: [], descriptions: [] };
+    const f = (c && c.fb) || { primary: "", headline: "", linkDesc: "" };
+    const tone = (c && c.tone) || (g.tone || "");
+    const push = (field, text, limit) =>
+      rows.push([biz, tone, field, text || "", String((text || "").length), String(limit || "")]);
+    (g.headlines || []).forEach((h, i) => push("headline_" + (i + 1), h, 30));
+    (g.descriptions || []).forEach((d, i) => push("description_" + (i + 1), d, 90));
+    push("path_1", fitPath(g.path1), 15);
+    push("path_2", fitPath(g.path2), 15);
+    push("fb_primary", f.primary, 125);
+    push("fb_headline", f.headline, 40);
+    push("fb_link_desc", f.linkDesc, 30);
+  });
+  return rows.map(r => r.map(escapeCsvCell).join(",")).join("\n");
+}
+
 // Export the current ads as a CSV (Google Ads Editor-friendly columns plus the
 // Facebook block). Pure function — the caller handles the download.
 function adsToCSV(googleAd, fbAd, business) {
@@ -91,6 +115,8 @@ function adsToCSV(googleAd, fbAd, business) {
   const push = (field, text, limit) => rows.push([biz, g.tone || "", field, text || "", String((text || "").length), String(limit || "")]);
   (g.headlines || []).forEach((h, i) => push("headline_" + (i + 1), h, 30));
   (g.descriptions || []).forEach((d, i) => push("description_" + (i + 1), d, 90));
+  push("path_1", fitPath(g.path1), 15);
+  push("path_2", fitPath(g.path2), 15);
   push("fb_primary", f.primary, 125);
   push("fb_headline", f.headline, 40);
   push("fb_link_desc", f.linkDesc, 30);
@@ -207,6 +233,28 @@ function generateGoogleAd(input, tone) {
   };
 }
 
+// Display-path segment: Google allows two ≤15-char paths under the URL.
+function fitPath(s) {
+  return String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, 15);
+}
+
+// Full responsive-search-ad asset set: up to 15 headlines + 4 descriptions.
+// Google mixes and matches these; the 3/2 core set stays the pinned creative.
+// Uses later rotation offsets so the pool differs from the core set.
+function generateRSAAssets(input, tone) {
+  const toneKey = __AD.BANK[tone] ? tone : "friendly";
+  const bank = __AD.BANK[toneKey];
+  const seed = (input && input._seed) || 0;
+  const number = extractNumber(input.description || "") || extractNumber(input.keywords || "");
+  const ctx = buildSlots(input, toneKey, number);
+  const cta = ctx.makeSlots(0, seed).cta;
+  const headlines = ensureCta(
+    pickFitting(bank.googleHeadlines, i => ctx.makeSlots(i, seed + 2), 30, 15, seed + 11), cta, 30);
+  const descriptions = ensureCta(
+    pickFitting(bank.googleDescriptions, i => ctx.makeSlots(i, seed + 5), 90, 4, seed + 17), cta, 90);
+  return { tone: toneKey, headlines, descriptions, cta, keyword: ctx.keyword };
+}
+
 function generateFacebookAd(input, tone) {
   const toneKey = __AD.BANK[tone] ? tone : "friendly";
   const bank = __AD.BANK[toneKey];
@@ -267,6 +315,14 @@ function validateCopy(googleAd, fbAd, input) {
     "fb-125": {
       pass: countChars(f.primary || "") <= 125,
       detail: countChars(f.primary || "") + "/125 chars"
+    },
+    "paths-15": {
+      pass: ["path1", "path2"].every(k => {
+        const raw = String((g && g[k]) || "").trim();
+        return raw.length <= 15;
+      }),
+      detail: ["path1", "path2"].map(k => String((g && g[k]) || "").trim())
+        .filter(Boolean).join(" / ") || "no display paths set"
     }
   };
 
@@ -279,5 +335,6 @@ function validateCopy(googleAd, fbAd, input) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { extractKeywords, generateGoogleAd, generateFacebookAd, validateCopy, adsToCSV, qualityScore };
+  module.exports = { extractKeywords, generateGoogleAd, generateFacebookAd,
+    generateRSAAssets, fitPath, validateCopy, adsToCSV, adsToCSVAll, qualityScore };
 }

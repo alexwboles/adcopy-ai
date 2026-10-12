@@ -19,6 +19,7 @@ const state = {
   saved: [],
   openaiKey: "",
   pinnedKeyword: "",
+  rsa: null,
   history: [],
   histIdx: -1,
   savedQuery: ""
@@ -89,10 +90,13 @@ function makeEditable(value, limit, multiline) {
 
 function currentGoogleAd() {
   const val = sel => [...document.querySelectorAll(sel)].map(el => el.value);
+  const paths = [...document.querySelectorAll("#g-paths input")];
   return {
     tone: state.tone,
     headlines: val("#g-headlines input"),
     descriptions: val("#g-descriptions textarea"),
+    path1: paths[0] ? paths[0].value : "",
+    path2: paths[1] ? paths[1].value : "",
     cta: state.cta
   };
 }
@@ -147,7 +151,7 @@ function renderCtaPicker() {
   });
 }
 
-function renderAdFields(g, f) {
+function renderAdFields(g, f, rsa) {
   const gh = $("g-headlines"), gd = $("g-descriptions");
   const fp = $("f-primary"), fr = $("f-rest");
   gh.innerHTML = ""; gd.innerHTML = ""; fp.innerHTML = ""; fr.innerHTML = "";
@@ -158,12 +162,73 @@ function renderAdFields(g, f) {
   fr.appendChild(makeEditable(f.headline, 40, false));
   fr.appendChild(makeEditable(f.linkDesc, 30, false));
 
+  // Display paths under the SERP URL — 15 chars each, live-synced to the URL line.
+  const gp = $("g-paths");
+  if (gp) {
+    gp.innerHTML = "";
+    const p1 = makeEditable(g.path1 || "", 15, false);
+    const p2 = makeEditable(g.path2 || "", 15, false);
+    const slash = document.createElement("span");
+    slash.className = "path-slash";
+    slash.textContent = "/";
+    gp.appendChild(p1);
+    gp.appendChild(slash);
+    gp.appendChild(p2);
+    gp.querySelectorAll("input").forEach(inp => {
+      inp.placeholder = "path";
+      inp.addEventListener("input", () => { syncChrome(); refreshChecklist(); });
+    });
+  }
+
+  renderRsa(rsa);
+
   ["google-card", "fb-card", "check-card"].forEach(id => { $(id).hidden = false; });
-  $("regenerate").disabled = false;
-  $("save-campaign").disabled = false;
+  const rsaCard = $("rsa-card");
+  if (rsaCard) rsaCard.hidden = !(rsa && (rsa.headlines.length || rsa.descriptions.length));
+  ["regenerate", "save-campaign", "export-csv", "export-ab"].forEach(id => {
+    const b = $(id);
+    if (b) b.disabled = false;
+  });
   $("polish").disabled = false;
-  $("export-csv").disabled = false;
   state.generated = true;
+}
+
+// ---------- full RSA asset set ----------
+
+function rsaLine(text, limit) {
+  const li = document.createElement("li");
+  const t = document.createElement("span");
+  t.className = "rsa-text";
+  t.textContent = text;
+  const c = document.createElement("span");
+  c.className = "counter" + (text.length > limit ? " over" : "");
+  c.textContent = text.length + "/" + limit;
+  li.appendChild(t);
+  li.appendChild(c);
+  return li;
+}
+
+function renderRsa(rsa) {
+  state.rsa = rsa || null;
+  const hl = $("rsa-headlines"), ds = $("rsa-descs");
+  if (!hl || !ds) return;
+  hl.innerHTML = ""; ds.innerHTML = "";
+  if (!rsa) return;
+  (rsa.headlines || []).forEach(h => hl.appendChild(rsaLine(h, 30)));
+  (rsa.descriptions || []).forEach(d => ds.appendChild(rsaLine(d, 90)));
+  const cnt = $("rsa-count");
+  if (cnt) cnt.textContent =
+    (rsa.headlines || []).length + " / 15 headlines · " +
+    (rsa.descriptions || []).length + " / 4 descriptions";
+}
+
+function copyRsa() {
+  const rsa = state.rsa;
+  if (!rsa) return;
+  const text = "GOOGLE RSA ASSET SET (" + state.tone + ")\nHeadlines:\n- " +
+    (rsa.headlines || []).join("\n- ") +
+    "\nDescriptions:\n- " + (rsa.descriptions || []).join("\n- ");
+  copyText(text, $("copy-rsa"));
 }
 
 function generate(bumpSeed) {
@@ -171,7 +236,8 @@ function generate(bumpSeed) {
   const input = readInput();
   const g = generateGoogleAd(input, state.tone);
   const f = generateFacebookAd(input, state.tone);
-  renderAdFields(g, f);
+  const rsa = generateRSAAssets(input, state.tone);
+  renderAdFields(g, f, rsa);
   refreshChecklist();
   syncChrome();
   pushHistory();
@@ -184,6 +250,7 @@ function pushHistory() {
   state.history.push({
     google: currentGoogleAd(),
     fb: currentFbAd(),
+    rsa: state.rsa,
     tone: state.tone,
     cta: state.cta,
     label: "Variant " + (state.seed + 1) + " · " + state.tone
@@ -200,7 +267,7 @@ function showHistory(idx) {
   state.tone = h.tone;
   state.cta = h.cta;
   renderToneBar(); renderCtaPicker();
-  renderAdFields(h.google, h.fb);
+  renderAdFields(h.google, h.fb, h.rsa);
   refreshChecklist();
   syncChrome();
   syncHistNav();
@@ -277,6 +344,28 @@ function exportCSV() {
   }
 }
 
+// A/B test export: regenerate the same brief in every tone and export all
+// three as one CSV, so variants can be bulk-uploaded side by side.
+function exportAB() {
+  const input = readInput();
+  const campaigns = TONES.map(t => ({
+    tone: t.id,
+    google: generateGoogleAd(input, t.id),
+    fb: generateFacebookAd(input, t.id)
+  }));
+  // Keep the paths the user typed in the preview on every variant row.
+  const g = currentGoogleAd();
+  campaigns.forEach(c => { c.google.path1 = g.path1; c.google.path2 = g.path2; });
+  const csv = adsToCSVAll(campaigns, $("business").value.trim());
+  downloadFile("adcopy-ab-test.csv", csv, "text/csv;charset=utf-8");
+  const btn = $("export-ab");
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = "Exported ✓";
+    setTimeout(() => { btn.textContent = orig; }, 1400);
+  }
+}
+
 function refreshChecklist() {
   if (!state.generated) return;
   const input = readInput();
@@ -316,8 +405,10 @@ function syncChrome() {
   const business = $("business").value.trim();
   const website = $("website").value.trim();
   const host = (website.replace(/^https?:\/\//, "").split("/")[0] || "").toLowerCase();
+  const base = host || (business ? business.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".com" : "yourbusiness.com");
+  const paths = [...document.querySelectorAll("#g-paths input")].map(i => i.value.trim()).filter(Boolean);
   const urlEl = $("g-url");
-  if (urlEl) urlEl.textContent = host || (business ? business.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".com" : "yourbusiness.com");
+  if (urlEl) urlEl.textContent = base + (paths.length ? "/" + paths.join("/") : "");
   const pageEl = $("fb-page");
   if (pageEl) pageEl.textContent = business || "Your business";
   const avEl = $("fb-avatar");
@@ -361,7 +452,8 @@ function wireCopyButtons() {
       const g = currentGoogleAd(), f = currentFbAd();
       const text = btn.dataset.copy === "google"
         ? "GOOGLE SEARCH AD\nHeadlines:\n- " + g.headlines.join("\n- ") +
-          "\nDescriptions:\n- " + g.descriptions.join("\n- ")
+          "\nDescriptions:\n- " + g.descriptions.join("\n- ") +
+          ((g.path1 || g.path2) ? "\nDisplay path: /" + (g.path1 || "") + "/" + (g.path2 || "") : "")
         : "FACEBOOK AD\n" + f.primary + "\nHeadline: " + f.headline + "\nLink: " + f.linkDesc;
       copyText(text, btn);
     });
@@ -445,7 +537,8 @@ function saveCampaign() {
     tone: state.tone,
     input: readInput(),
     google: currentGoogleAd(),
-    fb: currentFbAd()
+    fb: currentFbAd(),
+    rsa: state.rsa
   });
   $("campaign-name").value = "";
   persist(); renderSaved();
@@ -460,8 +553,9 @@ function loadCampaign(c) {
   state.cta = c.input.cta || CTAS[0];
   state.pinnedKeyword = c.input.pinnedKeyword || "";
   renderToneBar(); renderCtaPicker(); renderKeywordChips();
-  renderAdFields(c.google, c.fb);
+  renderAdFields(c.google, c.fb, c.rsa);
   refreshChecklist();
+  syncChrome();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -513,19 +607,20 @@ async function polishWithAI() {
     if (!Array.isArray(polished.headlines) || !polished.primary) throw new Error("bad shape");
 
     renderAdFields(
-      {
+      Object.assign({ path1: "", path2: "" }, currentGoogleAd(), {
         tone: state.tone,
         headlines: polished.headlines.slice(0, 3),
         descriptions: (polished.descriptions || []).slice(0, 2),
         cta: state.cta
-      },
+      }),
       {
         tone: state.tone,
         primary: polished.primary,
         headline: polished.fbHeadline || "",
         linkDesc: polished.linkDesc || "",
         cta: state.cta
-      }
+      },
+      state.rsa
     );
     refreshChecklist();
     aiNotice("Polished with AI. The checklist above still validates every character limit.", "info");
@@ -557,6 +652,10 @@ function boot() {
   $("polish").addEventListener("click", polishWithAI);
   const csvBtn = $("export-csv");
   if (csvBtn) csvBtn.addEventListener("click", exportCSV);
+  const abBtn = $("export-ab");
+  if (abBtn) abBtn.addEventListener("click", exportAB);
+  const rsaBtn = $("copy-rsa");
+  if (rsaBtn) rsaBtn.addEventListener("click", copyRsa);
   const hp = $("hist-prev"), hn = $("hist-next");
   if (hp) hp.addEventListener("click", () => showHistory(state.histIdx - 1));
   if (hn) hn.addEventListener("click", () => showHistory(state.histIdx + 1));
