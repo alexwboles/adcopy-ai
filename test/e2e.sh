@@ -141,5 +141,30 @@ for (const t of ["friendly","bold","professional"]) {
 }
 '
 
+check "14: banned word flows through all tones and the RSA pool" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE); S.bannedWords=["easy"];
+for (const t of ["friendly","bold","professional"]) {
+  const g=L.generateGoogleAd(Object.assign({_seed:3},S),t);
+  const f=L.generateFacebookAd(Object.assign({_seed:3},S),t);
+  const r=L.generateRSAAssets(Object.assign({_seed:3},S),t);
+  const all=[...g.headlines,...g.descriptions,f.primary,f.headline,f.linkDesc,...r.headlines,...r.descriptions].join(" ");
+  if(/\beasy\b/i.test(all)) throw new Error("banned word in "+t+": "+all);
+}
+'
+
+check "15: JSON round-trip preserves the RSA asset set and banner list" node -e '
+const L=require("./js/logic.js");
+const S=JSON.parse(process.env.SAMPLE); S.bannedWords=["cheap"];
+const r=L.generateRSAAssets(Object.assign({_seed:1},S),"bold");
+const saved=[{id:"cx",name:"N",date:"2026-10-13T00:00:00.000Z",tone:"bold",
+  input:Object.assign({},S,{bannedWords:["cheap"]}),
+  google:L.generateGoogleAd(Object.assign({_seed:1},S),"bold"),
+  fb:L.generateFacebookAd(Object.assign({_seed:1},S),"bold"),rsa:r}];
+const res=L.campaignsFromJSON(L.campaignsToJSON(saved)).campaigns[0];
+if(res.rsa.headlines.length!==r.headlines.length) throw new Error("RSA headlines lost");
+if(res.input.bannedWords[0]!=="cheap") throw new Error("bannedWords lost");
+'
+
 echo "--- e2e: $pass passed, $fail failed ---"
 exit $((fail>0))

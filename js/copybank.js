@@ -20,7 +20,8 @@ const CHECKLIST = [
   { id: "no-caps",             label: "No ALL-CAPS shouting" },
   { id: "no-clickbait",        label: "No clickbait superlatives without proof" },
   { id: "fb-125",              label: "Facebook primary text ≤ 125 chars (ideal)" },
-  { id: "paths-15",             label: "Display paths ≤ 15 chars each" }
+  { id: "paths-15",             label: "Display paths ≤ 15 chars each" },
+  { id: "no-banned",            label: "No banned words in copy" }
 ];
 
 // Slot vocabulary: {keyword} {business} {benefit} {cta} {number}

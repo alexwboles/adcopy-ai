@@ -74,6 +74,25 @@ function fillTemplate(tpl, slots) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => (slots[k] == null ? "" : String(slots[k])));
 }
 
+// Banned words: user-supplied words/phrases that must never appear in copy
+// (competitor names, words that violate policy, etc.).
+function parseBannedWords(raw) {
+  const list = Array.isArray(raw) ? raw : String(raw == null ? "" : raw).split(",");
+  return [...new Set(list.map(w => String(w).trim().toLowerCase()).filter(w => w.length > 1))];
+}
+
+function bannedWordPattern(banned) {
+  const esc = banned.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp("\\b(" + esc.join("|") + ")\\b", "i");
+}
+
+// Returns the matched banned word (original case from the banned list), or null.
+function findBannedWord(text, banned) {
+  if (!banned.length) return null;
+  const m = String(text || "").match(bannedWordPattern(banned));
+  return m ? m[1].toLowerCase() : null;
+}
+
 function escapeCsvCell(v) {
   const s = String(v == null ? "" : v);
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -162,9 +181,11 @@ function fitTo(text, limit) {
   return t.trim();
 }
 
-// Pick `count` distinct filled templates that honor every slot and the char limit.
+// Pick `count` distinct filled templates that honor every slot and the char limit,
+// and contain none of the `banned` words/phrases. `banned` defaults to [].
 // Rotation offset makes regeneration produce different variants.
-function pickFitting(templates, makeSlots, limit, count, offset) {
+function pickFitting(templates, makeSlots, limit, count, offset, banned) {
+  const ban = banned || [];
   const n = templates.length;
   const picked = [];
   const seen = new Set();
@@ -173,6 +194,7 @@ function pickFitting(templates, makeSlots, limit, count, offset) {
     const slots = makeSlots(picked.length);
     if (!slotsAvailable(tpl, slots)) continue;
     const filled = fitTo(fillTemplate(tpl, slots), limit);
+    if (findBannedWord(filled, ban)) continue;
     const key = filled.toLowerCase();
     if (!filled || seen.has(key)) continue;
     seen.add(key);
@@ -193,6 +215,7 @@ function buildSlots(input, toneKey, number) {
     number: number,
     business: (input.business || "").trim(),
     cta: input.cta || __AD.CTAS[0],
+    banned: parseBannedWords(input.bannedWords),
     makeSlots: (i, seed) => ({
       keyword,
       business: (input.business || "").trim(),
@@ -219,8 +242,8 @@ function generateGoogleAd(input, tone) {
   const number = extractNumber(input.description || "") || extractNumber(input.keywords || "");
   const ctx = buildSlots(input, toneKey, number);
 
-  let headlines = pickFitting(bank.googleHeadlines, i => ctx.makeSlots(i, seed), 30, 3, seed);
-  let descriptions = pickFitting(bank.googleDescriptions, i => ctx.makeSlots(i, seed + 3), 90, 2, seed + 5);
+  let headlines = pickFitting(bank.googleHeadlines, i => ctx.makeSlots(i, seed), 30, 3, seed, ctx.banned);
+  let descriptions = pickFitting(bank.googleDescriptions, i => ctx.makeSlots(i, seed + 3), 90, 2, seed + 5, ctx.banned);
   headlines = ensureCta(headlines, ctx.makeSlots(0, seed).cta, 30);
   descriptions = ensureCta(descriptions, ctx.makeSlots(0, seed).cta, 90);
 
@@ -249,9 +272,9 @@ function generateRSAAssets(input, tone) {
   const ctx = buildSlots(input, toneKey, number);
   const cta = ctx.makeSlots(0, seed).cta;
   const headlines = ensureCta(
-    pickFitting(bank.googleHeadlines, i => ctx.makeSlots(i, seed + 2), 30, 15, seed + 11), cta, 30);
+    pickFitting(bank.googleHeadlines, i => ctx.makeSlots(i, seed + 2), 30, 15, seed + 11, ctx.banned), cta, 30);
   const descriptions = ensureCta(
-    pickFitting(bank.googleDescriptions, i => ctx.makeSlots(i, seed + 5), 90, 4, seed + 17), cta, 90);
+    pickFitting(bank.googleDescriptions, i => ctx.makeSlots(i, seed + 5), 90, 4, seed + 17, ctx.banned), cta, 90);
   return { tone: toneKey, headlines, descriptions, cta, keyword: ctx.keyword };
 }
 
@@ -262,9 +285,9 @@ function generateFacebookAd(input, tone) {
   const number = extractNumber(input.description || "") || extractNumber(input.keywords || "");
   const ctx = buildSlots(input, toneKey, number);
 
-  let primary = pickFitting(bank.fbPrimary, i => ctx.makeSlots(i, seed + 2), 125, 1, seed)[0] || "";
-  let headline = pickFitting(bank.fbHeadlines, i => ctx.makeSlots(i, seed), 40, 1, seed + 1)[0] || "";
-  let linkDesc = pickFitting(bank.fbLinkDesc, i => ctx.makeSlots(i, seed), 30, 1, seed + 2)[0] || "";
+  let primary = pickFitting(bank.fbPrimary, i => ctx.makeSlots(i, seed + 2), 125, 1, seed, ctx.banned)[0] || "";
+  let headline = pickFitting(bank.fbHeadlines, i => ctx.makeSlots(i, seed), 40, 1, seed + 1, ctx.banned)[0] || "";
+  let linkDesc = pickFitting(bank.fbLinkDesc, i => ctx.makeSlots(i, seed), 30, 1, seed + 2, ctx.banned)[0] || "";
   const cta = ctx.makeSlots(0, seed).cta;
   primary = ensureCta([primary], cta, 125)[0];
 
@@ -282,6 +305,8 @@ function validateCopy(googleAd, fbAd, input) {
     .filter(Boolean).join(" \n ");
   const lower = copy.toLowerCase();
   const cta = ((input && input.cta) || (g && g.cta) || "").toLowerCase();
+  const banned = parseBannedWords((input || {}).bannedWords);
+  const bannedHit = findBannedWord(copy, banned);
 
   const results = {
     "headlines-30": {
@@ -323,6 +348,12 @@ function validateCopy(googleAd, fbAd, input) {
       }),
       detail: ["path1", "path2"].map(k => String((g && g[k]) || "").trim())
         .filter(Boolean).join(" / ") || "no display paths set"
+    },
+    "no-banned": {
+      pass: banned.length === 0 || bannedHit === null,
+      detail: banned.length === 0
+        ? "no banned-word list set"
+        : (bannedHit ? ('contains "' + bannedHit + '"') : "banned: " + banned.join(", "))
     }
   };
 
@@ -334,7 +365,74 @@ function validateCopy(googleAd, fbAd, input) {
   }));
 }
 
+// Saved-campaign JSON portability. Pure functions; the caller handles files.
+// campaignsToJSON: full saved list -> downloadable JSON string.
+// campaignsFromJSON: JSON string -> array of sanitized campaign objects
+// (invalid entries are dropped; missing ids are regenerated). Returns
+// { campaigns, dropped } so the UI can report what was skipped.
+function sanitizeCampaign(c, now) {
+  if (!c || typeof c !== "object") return null;
+  const input = (c.input && typeof c.input === "object") ? c.input : {};
+  const google = (c.google && typeof c.google === "object") ? c.google : {};
+  const fb = (c.fb && typeof c.fb === "object") ? c.fb : {};
+  return {
+    id: typeof c.id === "string" && c.id ? c.id : ("c" + (now || Date.now()).toString(36) + Math.floor(Math.random() * 1e4).toString(36)),
+    name: typeof c.name === "string" ? c.name : "Imported campaign",
+    date: typeof c.date === "string" ? c.date : new Date(now || Date.now()).toISOString(),
+    tone: typeof c.tone === "string" ? c.tone : "friendly",
+    input: {
+      business: String(input.business || ""),
+      description: String(input.description || ""),
+      website: String(input.website || ""),
+      keywords: String(input.keywords || ""),
+      cta: String(input.cta || ""),
+      pinnedKeyword: String(input.pinnedKeyword || ""),
+      bannedWords: Array.isArray(input.bannedWords) ? input.bannedWords.filter(w => typeof w === "string") : []
+    },
+    google: {
+      tone: typeof google.tone === "string" ? google.tone : "friendly",
+      headlines: Array.isArray(google.headlines) ? google.headlines.map(String) : [],
+      descriptions: Array.isArray(google.descriptions) ? google.descriptions.map(String) : [],
+      path1: String(google.path1 || ""),
+      path2: String(google.path2 || ""),
+      cta: String(google.cta || "")
+    },
+    fb: {
+      tone: typeof fb.tone === "string" ? fb.tone : "friendly",
+      primary: String(fb.primary || ""),
+      headline: String(fb.headline || ""),
+      linkDesc: String(fb.linkDesc || ""),
+      cta: String(fb.cta || "")
+    },
+    rsa: c.rsa && typeof c.rsa === "object" ? c.rsa : null
+  };
+}
+
+function campaignsToJSON(campaigns) {
+  return JSON.stringify({
+    app: "adcopy-ai",
+    version: 1,
+    exported: new Date().toISOString(),
+    campaigns: (campaigns || []).map(c => sanitizeCampaign(c)).filter(Boolean)
+  }, null, 2);
+}
+
+function campaignsFromJSON(text) {
+  const parsed = JSON.parse(String(text || ""));
+  const list = Array.isArray(parsed) ? parsed : parsed.campaigns;
+  if (!Array.isArray(list)) throw new Error("not an adcopy-ai campaign file");
+  const now = Date.now();
+  const campaigns = [];
+  let dropped = 0;
+  list.forEach(c => {
+    const s = sanitizeCampaign(c, now);
+    if (s) campaigns.push(s); else dropped++;
+  });
+  return { campaigns, dropped };
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { extractKeywords, generateGoogleAd, generateFacebookAd,
-    generateRSAAssets, fitPath, validateCopy, adsToCSV, adsToCSVAll, qualityScore };
+    generateRSAAssets, fitPath, fitTo, validateCopy, adsToCSV, adsToCSVAll, qualityScore,
+    parseBannedWords, findBannedWord, campaignsToJSON, campaignsFromJSON };
 }

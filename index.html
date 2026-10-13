@@ -45,6 +45,13 @@
 
       <div class="kwchips" id="kw-chips" aria-label="Detected keywords"></div>
 
+      <label class="field">Banned words <span class="limit-hint">brand safety — never appear in copy</span></label>
+      <div class="savebar">
+        <input type="text" id="ban-input" placeholder="e.g. cheap, competitor name…" autocomplete="off" aria-label="Add a banned word">
+        <button class="btn ghost small" id="ban-add" type="button">Add</button>
+      </div>
+      <div class="kwchips" id="ban-words" aria-label="Banned words"></div>
+
       <label class="field">Call to action</label>
       <div class="ctagrid" id="cta-picker" role="radiogroup" aria-label="Call to action"></div>
 
@@ -80,6 +87,7 @@
       <div class="out-actions">
         <button class="btn ghost" id="export-csv" disabled>Export CSV</button>
         <button class="btn ghost" id="export-ab" disabled>Export A/B CSV (3 tones)</button>
+        <button class="btn ghost" id="fit-limits" disabled>Fit to limits</button>
         <div class="histnav" aria-label="Variant history">
           <button class="btn ghost small" id="hist-prev" disabled>‹ Prev</button>
           <span class="hist-label" id="hist-label"></span>
@@ -150,6 +158,12 @@
       <div class="savebar">
         <input type="text" id="saved-search" placeholder="Search saved campaigns…" autocomplete="off" aria-label="Search saved campaigns">
       </div>
+      <div class="savebar">
+        <button class="btn ghost small" id="export-json" type="button">Export JSON</button>
+        <button class="btn ghost small" id="import-json" type="button">Import JSON</button>
+        <input type="file" id="import-json-file" accept=".json,application/json" hidden>
+      </div>
+      <div class="notice" id="saved-notice"></div>
       <div id="saved-list" class="saved-list"></div>
     </section>
   </section>

@@ -115,5 +115,70 @@ const joined=g.headlines.join(' ').toLowerCase();
 if(!joined.includes('whitening')) throw new Error('pinned keyword absent: '+g.headlines.join(' | '));
 "
 
+check "parseBannedWords normalizes and dedupes; findBannedWord is whole-word" node -e "
+const L=require('./js/logic.js');
+const b=L.parseBannedWords([' Easy ','easy','X',' cheap ']);
+if(b.join('|')!=='easy|cheap') throw new Error('parse: '+b.join('|')); // single letters dropped
+if(L.findBannedWord('The cheapest option in town',['cheap'])!==null) throw new Error('substring false positive');
+if(L.findBannedWord('Healthcare for families',['care'])!==null) throw new Error('word-char false positive');
+if(L.findBannedWord('Nothing cheap about us',['cheap'])!=='cheap') throw new Error('no match found');
+"
+
+check "generator skips templates containing a banned word" node -e "
+const L=require('./js/logic.js');
+const input={business:'Biz',description:'We make plumbing easy and simple for everyone.',cta:'Call Today',bannedWords:['easy'],_seed:0};
+const g=L.generateGoogleAd(input,'friendly');
+const f=L.generateFacebookAd(input,'friendly');
+const r=L.generateRSAAssets(input,'friendly');
+const all=[...g.headlines,...g.descriptions,f.primary,f.headline,f.linkDesc,...r.headlines,...r.descriptions].join(' ');
+if(/\beasy\b/i.test(all)) throw new Error('banned word leaked into copy');
+if(g.headlines.length!==3||g.descriptions.length!==2) throw new Error('shape broke under filter');
+"
+
+check "validateCopy reports the no-banned checklist item" node -e "
+const L=require('./js/logic.js'), B=require('./js/copybank.js');
+if(!B.CHECKLIST.some(c=>c.id==='no-banned')) throw new Error('no-banned not in checklist');
+const g={headlines:['Great plumbing today'],descriptions:['Call us now.'],cta:'Call Today'};
+const f={primary:'Short fb text.',headline:'H',linkDesc:'L'};
+const bad=L.validateCopy(g,f,{description:'plumbing',cta:'Call Today',bannedWords:['plumbing']});
+const it=bad.find(i=>i.id==='no-banned');
+if(!it||it.pass!==false) throw new Error('banned word not flagged');
+const none=L.validateCopy(g,f,{description:'plumbing',cta:'Call Today'});
+const it2=none.find(i=>i.id==='no-banned');
+if(!it2||it2.pass!==true) throw new Error('empty banned list should pass');
+"
+
+check "fitTo is exported and trims at word boundaries" node -e "
+const L=require('./js/logic.js');
+const out=L.fitTo('This headline is far too long for Google',30);
+if(out.length>30) throw new Error('still over: '+out);
+if(out!=='This headline is far too long') throw new Error('bad cut: '+out);
+"
+
+check "campaignsToJSON / campaignsFromJSON round-trip saved campaigns" node -e "
+const L=require('./js/logic.js');
+const saved=[{id:'c1',name:'Test',date:'2026-10-13T00:00:00.000Z',tone:'bold',
+  input:{business:'Biz',description:'d',website:'',keywords:'',cta:'Call Today',pinnedKeyword:'',bannedWords:['cheap']},
+  google:{tone:'bold',headlines:['H1','H2','H3'],descriptions:['D1','D2'],path1:'a',path2:'',cta:'Call Today'},
+  fb:{tone:'bold',primary:'P',headline:'H',linkDesc:'L',cta:'Call Today'},rsa:null}];
+const json=L.campaignsToJSON(saved);
+const res=L.campaignsFromJSON(json);
+if(res.campaigns.length!==1||res.dropped!==0) throw new Error('round-trip lost data');
+if(res.campaigns[0].id!=='c1'||res.campaigns[0].input.bannedWords[0]!=='cheap') throw new Error('fields not preserved');
+const res2=L.campaignsFromJSON(JSON.stringify({campaigns:[saved[0],null,42,'junk-string']}));
+if(res2.campaigns.length!==1||res2.dropped!==3) throw new Error('bad rows not dropped: '+res2.campaigns.length+'/'+res2.dropped);
+let threw=false; try{ L.campaignsFromJSON('{\"campaigns\":42}'); }catch(e){ threw=true; }
+if(!threw) throw new Error('invalid shape not rejected');
+"
+
+check "index.html + app.js wire the new UI (banned words, fit-to-limits, JSON io)" node -e "
+const fs=require('fs'), h=fs.readFileSync('index.html','utf8');
+for (const id of ['ban-input','ban-add','ban-words','fit-limits','export-json','import-json','import-json-file','saved-notice']) if(!h.includes('id=\"'+id+'\"')) throw new Error('missing '+id);
+const a=fs.readFileSync('js/app.js','utf8');
+for (const fn of ['renderBannedChips','addBannedWord','fitToLimits','exportJSON','importJSONFile','savedNotice']) if(!a.includes(fn)) throw new Error('missing fn '+fn);
+const l=fs.readFileSync('js/logic.js','utf8');
+for (const fn of ['parseBannedWords','findBannedWord','campaignsToJSON','campaignsFromJSON']) if(!l.includes(fn)) throw new Error('missing logic fn '+fn);
+"
+
 echo "--- smoke: $pass passed, $fail failed ---"
 exit $((fail>0))

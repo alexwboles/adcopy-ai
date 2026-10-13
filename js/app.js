@@ -2,7 +2,9 @@
 // clipboard, saved campaigns, and the optional OpenAI polish.
 "use strict";
 
-/* global CTAS, CHECKLIST, generateGoogleAd, generateFacebookAd, validateCopy */
+/* global CTAS, CHECKLIST, generateGoogleAd, generateFacebookAd, validateCopy,
+   fitTo, campaignsToJSON, campaignsFromJSON, generateRSAAssets, adsToCSV, adsToCSVAll,
+   qualityScore, extractKeywords */
 
 const STORE_KEY = "adcopy.v1";
 const TONES = [
@@ -19,6 +21,7 @@ const state = {
   saved: [],
   openaiKey: "",
   pinnedKeyword: "",
+  bannedWords: [],
   rsa: null,
   history: [],
   histIdx: -1,
@@ -34,6 +37,7 @@ function loadStore() {
     const s = JSON.parse(raw);
     if (Array.isArray(s.saved)) state.saved = s.saved;
     if (typeof s.openaiKey === "string") state.openaiKey = s.openaiKey;
+    if (Array.isArray(s.bannedWords)) state.bannedWords = s.bannedWords.filter(w => typeof w === "string");
   } catch (e) { /* corrupted store: start fresh */ }
 }
 
@@ -41,7 +45,8 @@ function persist() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
       saved: state.saved,
-      openaiKey: state.openaiKey
+      openaiKey: state.openaiKey,
+      bannedWords: state.bannedWords
     }));
   } catch (e) { /* storage full/blocked: non-fatal */ }
 }
@@ -54,6 +59,7 @@ function readInput() {
     keywords: $("keywords").value.trim(),
     cta: state.cta,
     pinnedKeyword: state.pinnedKeyword,
+    bannedWords: state.bannedWords.slice(),
     _seed: state.seed
   };
 }
@@ -69,6 +75,7 @@ function makeEditable(value, limit, multiline) {
   const field = multiline ? document.createElement("textarea") : document.createElement("input");
   if (!multiline) field.type = "text";
   field.value = value || "";
+  field.dataset.limit = String(limit);
   if (multiline) field.rows = 2;
   grow.appendChild(field);
 
@@ -185,7 +192,7 @@ function renderAdFields(g, f, rsa) {
   ["google-card", "fb-card", "check-card"].forEach(id => { $(id).hidden = false; });
   const rsaCard = $("rsa-card");
   if (rsaCard) rsaCard.hidden = !(rsa && (rsa.headlines.length || rsa.descriptions.length));
-  ["regenerate", "save-campaign", "export-csv", "export-ab"].forEach(id => {
+  ["regenerate", "save-campaign", "export-csv", "export-ab", "fit-limits"].forEach(id => {
     const b = $(id);
     if (b) b.disabled = false;
   });
@@ -318,6 +325,109 @@ function renderKeywordChips() {
     });
     box.appendChild(b);
   });
+}
+
+// ---------- banned words: brand-safety list kept out of generated + edited copy ----------
+
+function renderBannedChips() {
+  const box = $("ban-words");
+  if (!box) return;
+  box.innerHTML = "";
+  if (!state.bannedWords.length) {
+    const p = document.createElement("p");
+    p.className = "empty mini";
+    p.textContent = "None yet — the generator skips any template containing a banned word.";
+    box.appendChild(p);
+    return;
+  }
+  state.bannedWords.forEach(w => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chipbtn ban";
+    b.title = "Remove from banned list";
+    b.textContent = w + " ✕";
+    b.addEventListener("click", () => {
+      state.bannedWords = state.bannedWords.filter(x => x !== w);
+      persist();
+      renderBannedChips();
+      if (state.generated) generate(false);
+    });
+    box.appendChild(b);
+  });
+}
+
+function addBannedWord() {
+  const inp = $("ban-input");
+  const w = (inp.value || "").trim().toLowerCase();
+  inp.value = "";
+  if (!w || state.bannedWords.includes(w)) return;
+  state.bannedWords.push(w);
+  persist();
+  renderBannedChips();
+  if (state.generated) generate(false);
+}
+
+// ---------- fit-to-limits: auto-trim every over-limit editable line ----------
+
+function fitToLimits() {
+  let fixed = 0;
+  document.querySelectorAll(".copyline input, .copyline textarea").forEach(field => {
+    const limit = parseInt(field.dataset.limit || "0", 10);
+    if (limit > 0 && field.value.length > limit) {
+      field.value = fitTo(field.value, limit);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      fixed++;
+    }
+  });
+  const btn = $("fit-limits");
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = fixed ? ("Fixed " + fixed + " line" + (fixed > 1 ? "s" : "") + " ✓") : "All within limits ✓";
+    setTimeout(() => { btn.textContent = orig; }, 1600);
+  }
+}
+
+// ---------- saved-campaign JSON export / import ----------
+
+function exportJSON() {
+  const json = campaignsToJSON(state.saved);
+  downloadFile("adcopy-campaigns.json", json, "application/json;charset=utf-8");
+  const btn = $("export-json");
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = "Exported ✓";
+    setTimeout(() => { btn.textContent = orig; }, 1400);
+  }
+}
+
+function importJSONFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const { campaigns, dropped } = campaignsFromJSON(reader.result);
+      const known = new Set(state.saved.map(c => c.id));
+      let added = 0;
+      campaigns.forEach(c => {
+        if (known.has(c.id)) return; // skip exact duplicates
+        state.saved.push(c);
+        added++;
+      });
+      persist(); renderSaved();
+      savedNotice(added + " campaign" + (added === 1 ? "" : "s") + " imported" +
+        (dropped ? " · " + dropped + " row" + (dropped === 1 ? "" : "s") + " skipped" : "") + ".");
+    } catch (e) {
+      savedNotice("That file isn't an AdCopy AI campaign export.", "warn");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function savedNotice(msg, kind) {
+  const n = $("saved-notice");
+  if (!n) return;
+  n.textContent = msg;
+  n.className = "notice show " + (kind || "info");
+  setTimeout(() => { n.className = "notice"; }, 5000);
 }
 
 // ---------- CSV export ----------
@@ -552,7 +662,8 @@ function loadCampaign(c) {
   state.tone = c.tone || "friendly";
   state.cta = c.input.cta || CTAS[0];
   state.pinnedKeyword = c.input.pinnedKeyword || "";
-  renderToneBar(); renderCtaPicker(); renderKeywordChips();
+  if (Array.isArray(c.input.bannedWords)) state.bannedWords = c.input.bannedWords.filter(w => typeof w === "string");
+  renderToneBar(); renderCtaPicker(); renderKeywordChips(); renderBannedChips();
   renderAdFields(c.google, c.fb, c.rsa);
   refreshChecklist();
   syncChrome();
@@ -674,6 +785,31 @@ function boot() {
     $(id).addEventListener("input", renderKeywordChips);
   });
   renderKeywordChips();
+
+  // Banned-word list wiring.
+  renderBannedChips();
+  const banInp = $("ban-input"), banAdd = $("ban-add");
+  if (banInp) banInp.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addBannedWord(); }
+  });
+  if (banAdd) banAdd.addEventListener("click", addBannedWord);
+
+  // Fit-to-limits button.
+  const fitBtn = $("fit-limits");
+  if (fitBtn) fitBtn.addEventListener("click", fitToLimits);
+
+  // Saved-campaign JSON export / import.
+  const jsonBtn = $("export-json");
+  if (jsonBtn) jsonBtn.addEventListener("click", exportJSON);
+  const impBtn = $("import-json"), impFile = $("import-json-file");
+  if (impBtn && impFile) {
+    impBtn.addEventListener("click", () => impFile.click());
+    impFile.addEventListener("change", () => {
+      if (impFile.files.length) importJSONFile(impFile.files[0]);
+      impFile.value = "";
+    });
+  }
+
   const _renderCta = renderCtaPicker;
   renderCtaPicker = function () { _renderCta(); syncChrome(); };
   syncChrome();

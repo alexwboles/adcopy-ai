@@ -26,6 +26,9 @@ Type a plain-English description of your business, pick a tone and a call-to-act
 - **Full RSA asset set** — a bonus pool of up to 15 headlines + 4 descriptions per tone (Google mixes and matches them); one-click copy of the whole set.
 - **Display paths** — editable /path1/path2 (≤ 15 chars each) under the SERP URL, live-synced, validated by the checklist, and included in CSV exports.
 - **A/B test CSV export** — regenerate the same brief in all 3 tones and export one CSV with a tone column for side-by-side bulk upload.
+- **Banned-word brand-safety list** — add words or phrases that must never appear (competitor names, policy-violating terms); the generator skips any template containing them, a new checklist item validates edited copy too, and the list persists in your browser.
+- **Fit to limits** — one click auto-trims every over-limit editable line back to its character limit with word-boundary-aware cuts, then re-runs the pre-flight check.
+- **Saved-campaign JSON export/import** — download your whole saved list as a JSON file and import it on another browser; exact duplicates are skipped on import.
 - **Optional AI polish** — paste an OpenAI API key in Settings and the app will try one AI pass; on *any* failure it falls back to the local engine and says so honestly. The key is never required.
 
 ## How to run
