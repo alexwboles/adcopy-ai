@@ -180,5 +180,17 @@ const l=fs.readFileSync('js/logic.js','utf8');
 for (const fn of ['parseBannedWords','findBannedWord','campaignsToJSON','campaignsFromJSON']) if(!l.includes(fn)) throw new Error('missing logic fn '+fn);
 "
 
+check "console redesign: preview pane, strength card, device toggle, top bar wired" node -e "
+const fs=require('fs'), h=fs.readFileSync('index.html','utf8');
+for (const id of ['preview-pane','pv-body','pv-empty','pv-g-url','pv-g-headlines','pv-g-descriptions','pv-f-page','pv-f-avatar','pv-f-domain','pv-f-primary','pv-f-headline','pv-f-linkdesc','pv-f-cta','strength-card','strength-num','strength-arc','strength-label','strength-ideas','assets-empty','brief-card','ct-generate']) if(!h.includes('id=\"'+id+'\"')) throw new Error('missing '+id);
+if(!h.includes('data-dev=\"mobile\"')||!h.includes('data-dev=\"desktop\"')) throw new Error('device toggle missing');
+const a=fs.readFileSync('js/app.js','utf8');
+for (const fn of ['renderPreviewPane','renderStrength','displayUrl','STRENGTH_IDEAS']) if(!a.includes(fn)) throw new Error('missing fn '+fn);
+if(!a.includes('devbtn')) throw new Error('device toggle not wired');
+const c=fs.readFileSync('css/style.css','utf8');
+if(!c.includes('.console-top')||!c.includes('.preview-pane')||!c.includes('.strength-ring')) throw new Error('console css missing');
+if(/border-radius:\s*[1-9]/.test(c)) throw new Error('rounded corners found in css');
+"
+
 echo "--- smoke: $pass passed, $fail failed ---"
 exit $((fail>0))

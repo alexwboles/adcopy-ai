@@ -189,7 +189,10 @@ function renderAdFields(g, f, rsa) {
 
   renderRsa(rsa);
 
-  ["google-card", "fb-card", "check-card"].forEach(id => { $(id).hidden = false; });
+  ["google-card", "fb-card", "check-card", "strength-card"].forEach(id => { $(id).hidden = false; });
+  const ae = $("assets-empty");
+  if (ae) ae.hidden = true;
+  renderPreviewPane();
   const rsaCard = $("rsa-card");
   if (rsaCard) rsaCard.hidden = !(rsa && (rsa.headlines.length || rsa.descriptions.length));
   ["regenerate", "save-campaign", "export-csv", "export-ab", "fit-limits"].forEach(id => {
@@ -198,6 +201,115 @@ function renderAdFields(g, f, rsa) {
   });
   $("polish").disabled = false;
   state.generated = true;
+}
+
+// ---------- live preview pane (Meta Ads Manager pattern): read-only mirrors ----------
+
+function setText(id, text) {
+  const el = $(id);
+  if (el) el.textContent = text;
+}
+
+function displayUrl() {
+  const business = $("business").value.trim();
+  const website = $("website").value.trim();
+  const host = (website.replace(/^https?:\/\//, "").split("/")[0] || "").toLowerCase();
+  const base = host || (business ? business.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".com" : "yourbusiness.com");
+  const paths = [...document.querySelectorAll("#g-paths input")].map(i => i.value.trim()).filter(Boolean);
+  return base + (paths.length ? "/" + paths.join("/") : "");
+}
+
+function renderPreviewPane() {
+  const body = $("pv-body"), empty = $("pv-empty");
+  if (!state.generated) {
+    if (body) body.hidden = true;
+    if (empty) empty.hidden = false;
+    return;
+  }
+  if (body) body.hidden = false;
+  if (empty) empty.hidden = true;
+
+  const g = currentGoogleAd(), f = currentFbAd();
+  setText("pv-g-url", displayUrl());
+
+  const ph = $("pv-g-headlines");
+  if (ph) {
+    ph.innerHTML = "";
+    g.headlines.forEach((h, i) => {
+      if (i > 0) {
+        const s = document.createElement("span");
+        s.className = "hsep";
+        s.textContent = "|";
+        ph.appendChild(s);
+      }
+      const a = document.createElement("span");
+      a.textContent = h;
+      ph.appendChild(a);
+    });
+  }
+  setText("pv-g-descriptions", g.descriptions.join(" "));
+
+  const business = $("business").value.trim();
+  setText("pv-f-page", business || "Your business");
+  setText("pv-f-avatar", (business || "B").trim().charAt(0).toUpperCase());
+  setText("pv-f-domain", ($("website").value.trim().replace(/^https?:\/\//, "").split("/")[0] || "").toLowerCase() || "yourbusiness.com");
+  setText("pv-f-primary", f.primary);
+  setText("pv-f-headline", f.headline);
+  setText("pv-f-linkdesc", f.linkDesc);
+  setText("pv-f-cta", state.cta || "Learn more");
+}
+
+// ---------- ad strength ring + improvement ideas (Google Ads pattern) ----------
+
+const STRENGTH_IDEAS = {
+  "headlines-30":      { text: "Some headlines run over 30 characters — hit Fit to limits to trim them.", anchor: "google-card" },
+  "desc-90":           { text: "Some descriptions run over 90 characters — hit Fit to limits to trim them.", anchor: "google-card" },
+  "has-keyword":       { text: "Add a keyword from your description into a headline — Google rewards relevance.", anchor: "brief-card" },
+  "has-cta":           { text: "Give the ad a stronger call to action.", anchor: "brief-card" },
+  "has-benefit-number": { text: "Mention a specific number or benefit (e.g. “from $45”, “same-day”).", anchor: "brief-card" },
+  "no-caps":           { text: "Remove ALL-CAPS shouting — it reads as spam.", anchor: "check-card" },
+  "no-clickbait":      { text: "Drop unproven superlatives (“best ever”) or back them with proof.", anchor: "check-card" },
+  "fb-125":            { text: "Trim the Facebook primary text to 125 characters or less for feed.", anchor: "fb-card" },
+  "paths-15":          { text: "Shorten the display paths to 15 characters each.", anchor: "google-card" },
+  "no-banned":         { text: "A banned word slipped into the copy — edit or regenerate.", anchor: "brief-card" }
+};
+
+function renderStrength(items) {
+  const num = $("strength-num"), arc = $("strength-arc"), label = $("strength-label"), list = $("strength-ideas");
+  if (!num || !arc || !label || !list) return;
+  const score = qualityScore(items);
+  num.textContent = score;
+  const C = 2 * Math.PI * 42;
+  arc.style.strokeDasharray = String(C);
+  arc.style.strokeDashoffset = String(C * (1 - score / 100));
+  arc.classList.remove("good", "warn", "bad");
+  arc.classList.add(score >= 80 ? "good" : score >= 50 ? "warn" : "bad");
+  label.textContent = score >= 80 ? "Excellent — ready to ship."
+    : score >= 50 ? "Good — a few improvements available."
+    : score >= 25 ? "Average — fix the flagged items." : "Needs work — address the suggestions below.";
+
+  list.innerHTML = "";
+  const failing = items.filter(i => !i.pass).slice(0, 4);
+  if (!failing.length) {
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="idea-dot">●</span> All checks passing — nothing to fix.';
+    list.appendChild(li);
+    return;
+  }
+  failing.forEach(it => {
+    const idea = STRENGTH_IDEAS[it.id] || { text: it.label, anchor: "check-card" };
+    const li = document.createElement("li");
+    const dot = document.createElement("span");
+    dot.className = "idea-dot";
+    dot.textContent = "●";
+    const t = document.createElement("span");
+    t.textContent = idea.text + " ";
+    const a = document.createElement("a");
+    a.href = "#" + idea.anchor;
+    a.textContent = "View";
+    li.appendChild(dot); li.appendChild(t); li.appendChild(a);
+    list.appendChild(li);
+  });
 }
 
 // ---------- full RSA asset set ----------
@@ -507,6 +619,8 @@ function refreshChecklist() {
     qs.classList.remove("good", "warn", "bad");
     qs.classList.add(score >= 80 ? "good" : score >= 50 ? "warn" : "bad");
   }
+  renderStrength(items);
+  renderPreviewPane();
 }
 
 // ---------- mockup chrome: keep the fake platform UI in sync with the brief ----------
@@ -517,16 +631,19 @@ function syncChrome() {
   const host = (website.replace(/^https?:\/\//, "").split("/")[0] || "").toLowerCase();
   const base = host || (business ? business.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".com" : "yourbusiness.com");
   const paths = [...document.querySelectorAll("#g-paths input")].map(i => i.value.trim()).filter(Boolean);
-  const urlEl = $("g-url");
-  if (urlEl) urlEl.textContent = base + (paths.length ? "/" + paths.join("/") : "");
-  const pageEl = $("fb-page");
-  if (pageEl) pageEl.textContent = business || "Your business";
-  const avEl = $("fb-avatar");
-  if (avEl) avEl.textContent = (business || "B").trim().charAt(0).toUpperCase();
-  const domEl = $("fb-domain");
-  if (domEl) domEl.textContent = host || "yourbusiness.com";
-  const ctaBtn = $("fb-cta-btn");
-  if (ctaBtn) ctaBtn.textContent = state.cta || "Learn more";
+  const urlText = base + (paths.length ? "/" + paths.join("/") : "");
+  // Asset-card chrome (kept for the fb-card creative note) + preview-pane mirrors.
+  setText("g-url", urlText);
+  setText("pv-g-url", urlText);
+  const pageText = business || "Your business";
+  setText("fb-page", pageText);
+  setText("pv-f-page", pageText);
+  setText("fb-avatar", (business || "B").trim().charAt(0).toUpperCase());
+  setText("pv-f-avatar", (business || "B").trim().charAt(0).toUpperCase());
+  setText("fb-domain", host || "yourbusiness.com");
+  setText("pv-f-domain", host || "yourbusiness.com");
+  setText("fb-cta-btn", state.cta || "Learn more");
+  setText("pv-f-cta", state.cta || "Learn more");
   const creative = $("fb-creative-line");
   if (creative) creative.textContent = business ? ("Sponsored · " + business) : "Your creative goes here";
 }
@@ -758,6 +875,8 @@ function boot() {
   wireCopyButtons();
 
   $("generate").addEventListener("click", () => generate(false));
+  const ctGen = $("ct-generate");
+  if (ctGen) ctGen.addEventListener("click", () => generate(false));
   $("regenerate").addEventListener("click", () => generate(true));
   $("save-campaign").addEventListener("click", saveCampaign);
   $("polish").addEventListener("click", polishWithAI);
@@ -813,6 +932,16 @@ function boot() {
   const _renderCta = renderCtaPicker;
   renderCtaPicker = function () { _renderCta(); syncChrome(); };
   syncChrome();
+
+  // Preview device toggle (desktop / mobile width).
+  document.querySelectorAll(".devbtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".devbtn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const body = $("pv-body");
+      if (body) body.classList.toggle("mobile", btn.dataset.dev === "mobile");
+    });
+  });
 
   // Regenerate when the business inputs change after first generation? No —
   // keep it explicit so the checklist stays tied to visible copy.

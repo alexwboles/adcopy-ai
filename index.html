@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AdCopy AI — Ready-to-run ads in seconds</title>
+<title>AdCopy AI — Ad campaign console</title>
 <meta name="description" content="Describe your business. Get ready-to-run Google and Facebook ads in seconds. Free, no sign-up, works offline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,18 +12,27 @@
 </head>
 <body>
 
-<header class="studio-top">
-  <div class="brand"><span class="brand-mark">A</span><span class="brand-name">AdCopy <em>AI</em></span></div>
-  <p class="studio-tag">The copy desk for small-business ads — brief it, preview it, ship it.</p>
-  <span class="live-pill"><span class="pulse"></span>Local engine · works offline</span>
+<!-- ============ CONSOLE TOP BAR ============ -->
+<header class="console-top">
+  <div class="ct-left">
+    <span class="brand-mark" aria-hidden="true">A</span>
+    <div class="brand-title">
+      <span class="brand-name">AdCopy <em>AI</em></span>
+      <span class="brand-crumb">Campaigns <span class="crumb-sep">/</span> New campaign</span>
+    </div>
+  </div>
+  <div class="ct-right">
+    <span class="live-pill"><span class="pulse"></span>Local engine · works offline</span>
+    <button class="btn solid small" id="ct-generate" type="button">Generate ads</button>
+  </div>
 </header>
 
-<main class="studio">
+<div class="console">
 
-  <!-- ============ THE BRIEF ============ -->
-  <aside class="brief">
-    <section class="brief-card">
-      <h2>The brief</h2>
+  <!-- ============ LEFT RAIL: THE BRIEF ============ -->
+  <aside class="rail" aria-label="Campaign brief">
+    <section class="setup-card" id="brief-card">
+      <div class="setup-head"><h2>The brief</h2><span class="step">1</span></div>
       <p class="sub">Plain English is fine — the generator pulls keywords straight from your description.</p>
 
       <label class="field" for="business">Business name</label>
@@ -44,29 +53,28 @@
       </div>
 
       <div class="kwchips" id="kw-chips" aria-label="Detected keywords"></div>
+    </section>
 
-      <label class="field">Banned words <span class="limit-hint">brand safety — never appear in copy</span></label>
+    <section class="setup-card">
+      <div class="setup-head"><h2>Tone &amp; CTA</h2><span class="step">2</span></div>
+      <label class="field">Tone of voice</label>
+      <div class="tonebar" id="tone-bar" role="radiogroup" aria-label="Tone"></div>
+      <label class="field">Call to action</label>
+      <div class="ctagrid" id="cta-picker" role="radiogroup" aria-label="Call to action"></div>
+    </section>
+
+    <section class="setup-card">
+      <div class="setup-head"><h2>Brand safety</h2><span class="step">3</span></div>
+      <label class="field">Banned words <span class="limit-hint">never appear in copy</span></label>
       <div class="savebar">
         <input type="text" id="ban-input" placeholder="e.g. cheap, competitor name…" autocomplete="off" aria-label="Add a banned word">
         <button class="btn ghost small" id="ban-add" type="button">Add</button>
       </div>
       <div class="kwchips" id="ban-words" aria-label="Banned words"></div>
-
-      <label class="field">Call to action</label>
-      <div class="ctagrid" id="cta-picker" role="radiogroup" aria-label="Call to action"></div>
-
-      <label class="field">Tone of voice</label>
-      <div class="tonebar" id="tone-bar" role="radiogroup" aria-label="Tone"></div>
-
-      <div class="brief-actions">
-        <button class="btn" id="generate">Generate ads</button>
-        <button class="btn ghost" id="regenerate" disabled>Regenerate</button>
-      </div>
-      <p class="microcopy">Regenerate spins fresh variants from the same brief — nothing you typed is lost.</p>
     </section>
 
-    <section class="brief-card dim">
-      <h2>AI polish <span class="limit-hint">optional</span></h2>
+    <section class="setup-card dim">
+      <div class="setup-head"><h2>AI polish <span class="limit-hint">optional</span></h2></div>
       <p class="sub">The built-in engine needs no key. Add one and the polish button tries a single AI pass — on <em>any</em> failure it falls back to local copy and says so.</p>
       <label class="field" for="openai-key">OpenAI API key</label>
       <input type="text" id="openai-key" placeholder="sk-… (stored only in this browser)" autocomplete="off">
@@ -75,103 +83,216 @@
       </div>
       <div class="notice" id="ai-notice"></div>
     </section>
+
+    <div class="rail-actions">
+      <button class="btn solid" id="generate" type="button">Generate ads</button>
+      <button class="btn ghost" id="regenerate" type="button" disabled>Regenerate</button>
+      <p class="microcopy">Regenerate spins fresh variants from the same brief — nothing you typed is lost.</p>
+    </div>
   </aside>
 
-  <!-- ============ LIVE PREVIEWS ============ -->
-  <section class="outputs">
-    <div class="out-head">
-      <div>
-        <h2>Live previews</h2>
-        <p class="sub">Exactly how the copy reads in the wild. Every line stays editable — counters turn red over the limit.</p>
+  <!-- ============ CENTER: ASSETS ============ -->
+  <main class="assets" aria-label="Ad assets">
+
+    <!-- Ad strength (Google Ads pattern) -->
+    <section class="strength-card" id="strength-card" hidden>
+      <div class="strength-ring" role="img" aria-label="Ad strength score">
+        <svg viewBox="0 0 96 96" width="96" height="96" aria-hidden="true">
+          <circle cx="48" cy="48" r="42" class="ring-bg"></circle>
+          <circle cx="48" cy="48" r="42" class="ring-fg" id="strength-arc"></circle>
+        </svg>
+        <div class="ring-label"><span id="strength-num">0</span><span class="ring-sub">Ad strength</span></div>
       </div>
-      <div class="out-actions">
-        <button class="btn ghost" id="export-csv" disabled>Export CSV</button>
-        <button class="btn ghost" id="export-ab" disabled>Export A/B CSV (3 tones)</button>
-        <button class="btn ghost" id="fit-limits" disabled>Fit to limits</button>
-        <div class="histnav" aria-label="Variant history">
-          <button class="btn ghost small" id="hist-prev" disabled>‹ Prev</button>
-          <span class="hist-label" id="hist-label"></span>
-          <button class="btn ghost small" id="hist-next" disabled>Next ›</button>
-        </div>
+      <div class="strength-body">
+        <h2>Campaign readiness</h2>
+        <p class="sub" id="strength-label">Generate your first ad to score it.</p>
+        <ul class="ideas" id="strength-ideas" aria-label="Improvement suggestions"></ul>
+      </div>
+    </section>
+
+    <!-- Toolbar: exports + variant history -->
+    <div class="assets-toolbar">
+      <div class="tb-exports">
+        <button class="btn ghost small" id="export-csv" type="button" disabled>Export CSV</button>
+        <button class="btn ghost small" id="export-ab" type="button" disabled>Export A/B CSV (3 tones)</button>
+        <button class="btn ghost small" id="fit-limits" type="button" disabled>Fit to limits</button>
+      </div>
+      <div class="histnav" aria-label="Variant history">
+        <button class="btn ghost small" id="hist-prev" type="button" disabled>‹ Prev</button>
+        <span class="hist-label" id="hist-label"></span>
+        <button class="btn ghost small" id="hist-next" type="button" disabled>Next ›</button>
       </div>
     </div>
 
-    <section class="mock" id="google-card" hidden>
-      <div class="mock-bar"><span class="mock-name"><span class="g-dot"></span>Google Search</span><button class="btn ghost small" data-copy="google">Copy all</button></div>
-      <div class="serp">
-        <div class="serp-top"><span class="ad-badge">Ad</span><span class="serp-url" id="g-url">yourbusiness.com</span></div>
-        <div class="serp-paths" id="g-paths" aria-label="Display paths (optional, 15 chars each)"></div>
-        <div id="g-headlines" class="serp-heads"></div>
-        <div id="g-descriptions" class="serp-descs"></div>
+    <div class="assets-empty" id="assets-empty">
+      <div class="empty-ill" aria-hidden="true"><span>A</span></div>
+      <h2>Your ads land here</h2>
+      <p>Fill in the brief on the left and hit <strong>Generate ads</strong>. Headlines, descriptions, and the Facebook creative appear as editable assets with live character counters.</p>
+      <ol class="empty-steps">
+        <li><strong>1.</strong> Describe the business</li>
+        <li><strong>2.</strong> Pick a tone + CTA</li>
+        <li><strong>3.</strong> Generate &amp; ship</li>
+      </ol>
+    </div>
+
+    <section class="panel asset-card" id="google-card" hidden>
+      <div class="panel-head">
+        <div>
+          <h2><span class="g-dot" aria-hidden="true"></span>Google Search ad</h2>
+          <p class="sub">Responsive search ad · 3 headlines ≤ 30 chars · 2 descriptions ≤ 90 chars · optional display paths ≤ 15 chars</p>
+        </div>
+        <button class="btn ghost small" data-copy="google" type="button">Copy all</button>
       </div>
-      <p class="mock-note">Responsive search ad · 3 headlines ≤ 30 chars · 2 descriptions ≤ 90 chars · optional display paths ≤ 15 chars</p>
+      <div class="asset-grid">
+        <div class="asset-block">
+          <h3 class="asset-h">Headlines</h3>
+          <div id="g-headlines" aria-label="Editable headlines"></div>
+        </div>
+        <div class="asset-block">
+          <h3 class="asset-h">Descriptions</h3>
+          <div id="g-descriptions" aria-label="Editable descriptions"></div>
+        </div>
+        <div class="asset-block">
+          <h3 class="asset-h">Display path</h3>
+          <div id="g-paths" aria-label="Display paths (optional, 15 chars each)"></div>
+          <p class="microcopy">Shown under the display URL in search results.</p>
+        </div>
+      </div>
     </section>
 
-    <section class="mock" id="fb-card" hidden>
-      <div class="mock-bar"><span class="mock-name"><span class="fb-dot"></span>Facebook feed</span><button class="btn ghost small" data-copy="fb">Copy all</button></div>
-      <div class="fbcard">
-        <div class="fb-head">
-          <span class="fb-avatar" id="fb-avatar">B</span>
-          <div class="fb-who"><div class="fb-page" id="fb-page">Your business</div><div class="fb-sub">Sponsored · <span id="fb-domain">yourbusiness.com</span></div></div>
+    <section class="panel asset-card" id="fb-card" hidden>
+      <div class="panel-head">
+        <div>
+          <h2><span class="fb-dot" aria-hidden="true"></span>Facebook feed ad</h2>
+          <p class="sub">Feed placement · primary text ≤ 125 chars ideal · headline ≤ 40 · link description ≤ 30</p>
         </div>
-        <div id="f-primary" class="fb-primary"></div>
-        <div class="fb-creative"><span id="fb-creative-line">Your creative goes here</span></div>
-        <div class="fb-foot">
-          <div class="fb-linkwrap"><div id="f-rest" class="fb-link"></div></div>
-          <button class="fb-cta" id="fb-cta-btn" type="button" tabindex="-1">Learn more</button>
+        <button class="btn ghost small" data-copy="fb" type="button">Copy all</button>
+      </div>
+      <div class="asset-grid">
+        <div class="asset-block wide">
+          <h3 class="asset-h">Primary text</h3>
+          <div id="f-primary" aria-label="Editable primary text"></div>
+        </div>
+        <div class="asset-block">
+          <h3 class="asset-h">Headline</h3>
+          <div id="f-rest" aria-label="Editable headline and link description"></div>
         </div>
       </div>
-      <p class="mock-note">Feed placement · primary text ≤ 125 chars ideal · headline ≤ 40 · link description ≤ 30</p>
+      <div class="creative-note"><span id="fb-creative-line">Your creative goes here</span></div>
     </section>
 
     <section class="panel" id="check-card" hidden>
-      <div class="panel-head"><h2>Pre-flight check</h2><span class="qa-score" id="qa-score"></span><span class="qa-count" id="qa-count"></span></div>
-      <p class="sub">Re-validated on every keystroke against live copy.</p>
+      <div class="panel-head">
+        <div>
+          <h2>Pre-flight check</h2>
+          <p class="sub">Re-validated on every keystroke against live copy.</p>
+        </div>
+        <div class="qa"><span class="qa-score" id="qa-score"></span><span class="qa-count" id="qa-count"></span></div>
+      </div>
       <ul class="checklist" id="checklist"></ul>
     </section>
 
     <section class="panel" id="rsa-card" hidden>
-      <div class="panel-head"><h2>Full RSA asset set</h2><span class="qa-count" id="rsa-count"></span></div>
-      <p class="sub">Google mixes and matches up to 15 headlines and 4 descriptions per responsive search ad. This is the full pool — the 3 headlines + 2 descriptions above stay your pinned core.</p>
+      <div class="panel-head">
+        <div>
+          <h2>Full RSA asset set</h2>
+          <p class="sub">Google mixes and matches up to 15 headlines and 4 descriptions per responsive search ad. This is the full pool — the 3 headlines + 2 descriptions above stay your pinned core.</p>
+        </div>
+        <button class="btn ghost small" id="copy-rsa" type="button">Copy RSA assets</button>
+      </div>
+      <p class="rsa-count" id="rsa-count"></p>
       <div class="rsa-cols">
         <div>
-          <h3 class="rsa-h">Headlines</h3>
+          <h3 class="asset-h">Headlines</h3>
           <ul class="rsa-list" id="rsa-headlines"></ul>
         </div>
         <div>
-          <h3 class="rsa-h">Descriptions</h3>
+          <h3 class="asset-h">Descriptions</h3>
           <ul class="rsa-list" id="rsa-descs"></ul>
         </div>
       </div>
-      <div class="brief-actions">
-        <button class="btn ghost" id="copy-rsa">Copy RSA assets</button>
-      </div>
     </section>
+  </main>
 
-    <section class="panel">
-      <div class="panel-head"><h2>Saved campaigns</h2></div>
+  <!-- ============ RIGHT: LIVE PREVIEW (Meta Ads Manager pattern) ============ -->
+  <aside class="preview-pane" id="preview-pane" aria-label="Live ad preview">
+    <div class="pv-head">
+      <div>
+        <h2>Live preview</h2>
+        <p class="sub">Mirrors your editable copy in real time.</p>
+      </div>
+      <div class="device-toggle" role="group" aria-label="Preview device">
+        <button type="button" class="devbtn active" data-dev="desktop">Desktop</button>
+        <button type="button" class="devbtn" data-dev="mobile">Mobile</button>
+      </div>
+    </div>
+
+    <div class="pv-empty" id="pv-empty">
+      <div class="pv-skel"><div></div><div></div><div></div></div>
+      <p>Previews appear here as soon as you generate — exactly how the copy reads in the wild.</p>
+    </div>
+
+    <div class="pv-body" id="pv-body" hidden>
+      <section class="pv-card">
+        <div class="pv-bar"><span class="pv-name"><span class="g-dot"></span>Google Search</span></div>
+        <div class="serp">
+          <div class="serp-top"><span class="ad-badge">Ad</span><span class="serp-url" id="pv-g-url">yourbusiness.com</span></div>
+          <div class="serp-heads" id="pv-g-headlines"></div>
+          <div class="serp-descs" id="pv-g-descriptions"></div>
+        </div>
+      </section>
+      <section class="pv-card">
+        <div class="pv-bar"><span class="pv-name"><span class="fb-dot"></span>Facebook feed</span></div>
+        <div class="fbcard">
+          <div class="fb-head">
+            <span class="fb-avatar" id="pv-f-avatar">B</span>
+            <div class="fb-who">
+              <div class="fb-page" id="pv-f-page">Your business</div>
+              <div class="fb-sub">Sponsored · <span id="pv-f-domain">yourbusiness.com</span></div>
+            </div>
+          </div>
+          <div class="fb-primary" id="pv-f-primary"></div>
+          <div class="fb-creative"><span>Your creative goes here</span></div>
+          <div class="fb-foot">
+            <div class="fb-linkwrap">
+              <div class="fb-link" id="pv-f-headline"></div>
+              <div class="fb-linkdesc" id="pv-f-linkdesc"></div>
+            </div>
+            <button class="fb-cta" id="pv-f-cta" type="button" tabindex="-1">Learn more</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ CAMPAIGNS TABLE ============ -->
+<section class="campaigns">
+  <div class="camp-head">
+    <div>
+      <h2>Saved campaigns</h2>
       <p class="sub">Stored only in this browser (<span class="kbd-note">localStorage · <code>adcopy.v1</code></span>). Nothing leaves your device.</p>
-      <div class="savebar">
-        <input type="text" id="campaign-name" placeholder="Campaign name…" autocomplete="off">
-        <button class="btn ghost" id="save-campaign" disabled>Save current ads</button>
-      </div>
-      <div class="savebar">
-        <input type="text" id="saved-search" placeholder="Search saved campaigns…" autocomplete="off" aria-label="Search saved campaigns">
-      </div>
-      <div class="savebar">
-        <button class="btn ghost small" id="export-json" type="button">Export JSON</button>
-        <button class="btn ghost small" id="import-json" type="button">Import JSON</button>
-        <input type="file" id="import-json-file" accept=".json,application/json" hidden>
-      </div>
-      <div class="notice" id="saved-notice"></div>
-      <div id="saved-list" class="saved-list"></div>
-    </section>
-  </section>
-</main>
-
-<footer class="studio-foot">
-  <span>AdCopy AI · free forever · your data never leaves this browser</span><span id="foot-year"></span>
-</footer>
+    </div>
+    <div class="camp-actions">
+      <input type="text" id="campaign-name" placeholder="Campaign name…" autocomplete="off" aria-label="Campaign name">
+      <button class="btn ghost small" id="save-campaign" type="button" disabled>Save current ads</button>
+    </div>
+  </div>
+  <div class="camp-toolbar">
+    <input type="text" id="saved-search" placeholder="Search saved campaigns…" autocomplete="off" aria-label="Search saved campaigns">
+    <div class="camp-io">
+      <button class="btn ghost small" id="export-json" type="button">Export JSON</button>
+      <button class="btn ghost small" id="import-json" type="button">Import JSON</button>
+      <input type="file" id="import-json-file" accept=".json,application/json" hidden>
+    </div>
+  </div>
+  <div class="notice" id="saved-notice"></div>
+  <div class="camp-table-head" aria-hidden="true">
+    <span>Campaign</span><span>Details</span><span class="th-actions">Actions</span>
+  </div>
+  <div id="saved-list" class="saved-list"></div>
+  <p class="studio-foot"><span>AdCopy AI · free forever · your data never leaves this browser</span><span id="foot-year"></span></p>
+</section>
 
 <script src="js/copybank.js"></script>
 <script src="js/logic.js"></script>
