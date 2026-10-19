@@ -1,3 +1,7 @@
+> **This project has been merged into socialspark-ai — active development continues at https://github.com/alexwboles/socialspark-ai.**
+>
+> The ad campaign studio (Google Search + Facebook ads, pre-flight checklist, RSA assets, CSV exports), the banned-word brand-safety list, and the Bold tone all live on in SocialSpark AI's merged content studio. Your saved campaigns and banned words migrate automatically the first time you open the new app.
+
 # AdCopy AI
 
 **Describe your business. Get ready-to-run ads in seconds.**
